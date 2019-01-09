@@ -1,5 +1,6 @@
 package burp;
 
+import burp.models.ExtensionSettings;
 import burp.models.FaradayConnectorStatus;
 import burp.models.exceptions.BaseFaradayException;
 import burp.models.exceptions.InvalidCredentialsException;
@@ -8,6 +9,7 @@ import burp.models.exceptions.SecondFactorRequiredException;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.PrintWriter;
 
 public class FaradayExtensionUI implements ITab {
 
@@ -21,16 +23,20 @@ public class FaradayExtensionUI implements ITab {
     private JLabel loginStatusLabel;
 
     private JPanel tab;
+    private PrintWriter stdout;
     private final FaradayConnector faradayConnector;
+    private final ExtensionSettings extensionSettings;
 
     private FaradayConnectorStatus status = FaradayConnectorStatus.DISCONNECTED;
 
-    FaradayExtensionUI(FaradayConnector faradayConnector) {
+    FaradayExtensionUI(PrintWriter stdout, FaradayConnector faradayConnector, ExtensionSettings extensionSettings) {
+        this.stdout = stdout;
         this.faradayConnector = faradayConnector;
+        this.extensionSettings = extensionSettings;
 
-        tab = new JPanel();
-        GroupLayout layout = new GroupLayout(tab);
-        tab.setLayout(layout);
+        this.tab = new JPanel();
+        GroupLayout layout = new GroupLayout(this.tab);
+        this.tab.setLayout(layout);
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
 
@@ -52,14 +58,24 @@ public class FaradayExtensionUI implements ITab {
         layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel);
 
         settingsPannel.setEnabled(false);
-    }
 
+        if (!extensionSettings.getCookie().isEmpty()) {
+            log("Settings found:");
+            log("Faraday Server URL: " + extensionSettings.getFaradayURL());
+            log("Username: " + extensionSettings.getUsername());
+            log("Cookie: " + extensionSettings.getCookie());
+
+            faradayConnector.setBaseUrl(extensionSettings.getFaradayURL());
+            faradayConnector.setCookie(extensionSettings.getCookie());
+            getSession();
+        }
+    }
 
     private Component setupLoginPanel() {
         JPanel loginPanel = new JPanel();
         loginPanel.setBorder(BorderFactory.createTitledBorder("Login to Faraday"));
 
-        JLabel faradayUrlLabel = new JLabel("Faraday URL: ");
+        JLabel faradayUrlLabel = new JLabel("Faraday Server URL: ");
         faradayUrlText = new JTextField("http://localhost:5985");
 
         JLabel usernameLabel = new JLabel("Username: ");
@@ -141,6 +157,9 @@ public class FaradayExtensionUI implements ITab {
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
         importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns());
 
+        JButton restoreButton = new JButton("Restore Settings");
+        restoreButton.addActionListener(actionEvent -> restoreSettings());
+
         GroupLayout layout = new GroupLayout(settingsPannel);
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
@@ -148,12 +167,14 @@ public class FaradayExtensionUI implements ITab {
         settingsPannel.setLayout(layout);
 
         layout.setHorizontalGroup(
-                layout.createSequentialGroup()
+                layout.createParallelGroup()
+                        .addComponent(restoreButton)
                         .addComponent(importCurrentVulnsButton)
         );
 
         layout.setVerticalGroup(
                 layout.createSequentialGroup()
+                        .addComponent(restoreButton)
                         .addComponent(importCurrentVulnsButton)
         );
 
@@ -196,23 +217,40 @@ public class FaradayExtensionUI implements ITab {
             JOptionPane.showMessageDialog(tab, "Invalid credentials.", "Error", JOptionPane.ERROR_MESSAGE);
             passwordField.setText("");
             setStatus("Invalid credentials");
+            return;
 
         } catch (SecondFactorRequiredException e) {
 
             secondFactorField.setEnabled(true);
             setStatus("2FA Token required");
             JOptionPane.showMessageDialog(tab, "The 2FA token is required", "Error", JOptionPane.INFORMATION_MESSAGE);
+            return;
 
         } catch (InvalidFaradayException e) {
 
             JOptionPane.showMessageDialog(tab, "Invalid Faraday server URL.", "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
+            return;
 
         } catch (BaseFaradayException e) {
+            // Unreachable
             e.printStackTrace();
+            return;
         }
 
         JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
+
+        getSession();
+    }
+
+    private void getSession() {
+
+        try {
+            faradayConnector.getSession();
+        } catch (BaseFaradayException e) {
+            log("Error acquiring session");
+            log(e.toString());
+        }
 
         usernameText.setEditable(false);
         passwordField.setEditable(false);
@@ -220,6 +258,11 @@ public class FaradayExtensionUI implements ITab {
         statusButton.setText("Logout");
         setStatus("Logged in");
         this.status = FaradayConnectorStatus.LOGGED_IN;
+
+        extensionSettings.setUsername(usernameText.getText());
+        extensionSettings.setFaradayURL(faradayUrlText.getText());
+        extensionSettings.setCookie(faradayConnector.getCookie());
+        extensionSettings.save();
     }
 
     private void connect() {
@@ -262,6 +305,11 @@ public class FaradayExtensionUI implements ITab {
         faradayConnector.logout();
     }
 
+    private void restoreSettings() {
+        logout();
+        extensionSettings.restore();
+    }
+
     private void onImportCurrentVulns() {
         // TODO
     }
@@ -278,6 +326,10 @@ public class FaradayExtensionUI implements ITab {
 
     private void setStatus(final String status) {
         loginStatusLabel.setText(status);
+    }
+
+    private void log(final String msg) {
+        this.stdout.println("[UI] " + msg);
     }
 
 }

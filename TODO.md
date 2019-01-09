@@ -1,0 +1,1 @@
+* Que le boton de import permita seleccionar in scope / all

@@ -103,10 +103,9 @@ public class FaradayConnector {
                 this.cookie = cookies.get("session").getValue();
         }
 
-        getSession();
     }
 
-    private void getSession() throws BaseFaradayException {
+    public void getSession() throws BaseFaradayException {
 
         log("Fetching session info");
 
@@ -115,7 +114,9 @@ public class FaradayConnector {
         this.sessionInfo = response.readEntity(SessionInfo.class);
 
         Map<String, NewCookie> cookies = response.getCookies();
-        this.cookie = cookies.get("session").getValue();
+        if (cookies.containsKey("session")) {
+            this.cookie = cookies.get("session").getValue();
+        }
 
         log("Session set.");
         log(this.sessionInfo.toString());
@@ -123,10 +124,12 @@ public class FaradayConnector {
     }
 
     private Response get(final String method, final boolean authenticated) throws FaradayConnectionException {
-        WebTarget infoEndpoint = buildTargetForMethod(method);
+        WebTarget target = buildTargetForMethod(method);
+
+        log("GET " + target.getUri().toString());
 
         try {
-            Invocation.Builder request = infoEndpoint
+            Invocation.Builder request = target
                     .request(MediaType.APPLICATION_JSON);
 
             if (authenticated) {
@@ -138,6 +141,7 @@ public class FaradayConnector {
 
             return request.get();
         } catch (ProcessingException e) {
+            e.printStackTrace(this.stdout);
             throw new FaradayConnectionException();
         }
     }
@@ -156,6 +160,14 @@ public class FaradayConnector {
 
     private void log(final String msg) {
         this.stdout.println("[CONNECTOR] " + msg);
+    }
+
+    public String getCookie() {
+        return cookie;
+    }
+
+    public void setCookie(String cookie) {
+        this.cookie = cookie;
     }
 }
 

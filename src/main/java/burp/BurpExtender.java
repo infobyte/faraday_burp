@@ -1,8 +1,10 @@
 package burp;
 
+import burp.models.ExtensionSettings;
+
 import java.io.PrintWriter;
 
-public class BurpExtender implements IBurpExtender {
+public class BurpExtender implements IBurpExtender, IExtensionStateListener {
 
     private static final String EXTENSION_NAME = "Faraday for Burp v1.5";
 
@@ -14,6 +16,7 @@ public class BurpExtender implements IBurpExtender {
 
     private FaradayConnector faradayConnector;
     private FaradayExtensionUI faradayExtensionUI;
+    private ExtensionSettings extensionSettings;
 
     @Override
     public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
@@ -23,8 +26,9 @@ public class BurpExtender implements IBurpExtender {
         helpers = callbacks.getHelpers();
 
         stdout = new PrintWriter(callbacks.getStdout(), true);
-        faradayConnector = new FaradayConnector(stdout);
-        faradayExtensionUI = new FaradayExtensionUI(faradayConnector);
+        this.faradayConnector = new FaradayConnector(stdout);
+        this.extensionSettings = new ExtensionSettings(callbacks);
+        this.faradayExtensionUI = new FaradayExtensionUI(stdout,faradayConnector, extensionSettings);
 
         callbacks.addSuiteTab(faradayExtensionUI);
 
@@ -38,13 +42,20 @@ public class BurpExtender implements IBurpExtender {
 //
 
 
-        stdout.println(EXTENSION_NAME + " Loaded.");
+        log(EXTENSION_NAME + " Loaded");
 //        stdout.println("RPCServer: " + rpcServerTxt.getText());
 //        stdout.println("Import new vulnerabilities detected: " + boolString(callbacks.loadExtensionSetting("import_new_vulns")));
 
 //        callbacks.registerContextMenuFactory(this);
 //        callbacks.registerScannerListener(this);
-//        callbacks.registerExtensionStateListener(this);
+        callbacks.registerExtensionStateListener(this);
+    }
+
+    @Override
+    public void extensionUnloaded() {
+        log("Unloading extension");
+        faradayConnector.logout();
+
     }
 //
 //    @Override
@@ -273,6 +284,9 @@ public class BurpExtender implements IBurpExtender {
 //        this.faradayConnector.reconnect(rpcServerTxt.getText());
 //    }
 
+    private void log(final String msg) {
+        this.stdout.println("[EXTENDER] " + msg);
+    }
 
 }
 
