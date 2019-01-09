@@ -1,4 +1,4 @@
-package burp.models;
+package burp.faraday.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

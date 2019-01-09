@@ -1,10 +1,10 @@
-package burp;
+package burp.faraday;
 
 
-import burp.models.ServerInfo;
-import burp.models.SessionInfo;
-import burp.models.User;
-import burp.models.exceptions.*;
+import burp.faraday.models.ServerInfo;
+import burp.faraday.models.SessionInfo;
+import burp.faraday.models.User;
+import burp.faraday.exceptions.*;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
 
 import javax.ws.rs.ProcessingException;
@@ -13,6 +13,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class FaradayConnector {
@@ -144,6 +146,18 @@ public class FaradayConnector {
             e.printStackTrace(this.stdout);
             throw new FaradayConnectionException();
         }
+    }
+
+    public List<Workspace> getWorkspaces() throws BaseFaradayException {
+        if (!this.urlIsValid) {
+            throw new InvalidFaradayException();
+        }
+
+        Response response = get("v2/ws", true);
+
+        Workspace[] workspaceList = response.readEntity(Workspace[].class);
+
+        return Arrays.asList(workspaceList);
     }
 
     private Response get(final String method) throws FaradayConnectionException {

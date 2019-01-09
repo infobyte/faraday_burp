@@ -1,4 +1,4 @@
-package burp.models;
+package burp.faraday.models;
 
 public class User {
     private String email;

@@ -1,9 +1,12 @@
-import burp.FaradayConnector;
-import burp.models.exceptions.InvalidCredentialsException;
-import burp.models.exceptions.InvalidFaradayException;
-import burp.models.exceptions.SecondFactorRequiredException;
+import burp.faraday.FaradayConnector;
+import burp.faraday.Workspace;
+import burp.faraday.exceptions.BaseFaradayException;
+import burp.faraday.exceptions.InvalidCredentialsException;
+import burp.faraday.exceptions.InvalidFaradayException;
+import burp.faraday.exceptions.SecondFactorRequiredException;
 
 import java.io.PrintWriter;
+import java.util.List;
 
 public class ExtensionTest {
 
@@ -12,21 +15,33 @@ public class ExtensionTest {
         FaradayConnector connector = new FaradayConnector(new PrintWriter(System.out));
 
         connector.setBaseUrl("http://localhost:5985");
-//
-//        if (!connector.validateFaradayURL()) {
-//            System.out.println("Invalid base url");
-//            return;
-////        }
-//
-//        try {
-//            connector.login("asdasd", "asdasd");
-//        } catch (InvalidCredentialsException e) {
-//            e.printStackTrace();
-//        } catch (SecondFactorRequiredException e) {
-//            e.printStackTrace();
-//        } catch (InvalidFaradayException e) {
-//            e.printStackTrace();
-//        }
+
+        try {
+            connector.validateFaradayURL();
+        } catch (InvalidFaradayException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            connector.login("faraday", "123456");
+        } catch (InvalidCredentialsException e) {
+            e.printStackTrace();
+        } catch (SecondFactorRequiredException e) {
+            e.printStackTrace();
+        } catch (InvalidFaradayException e) {
+            e.printStackTrace();
+        } catch (BaseFaradayException e) {
+            e.printStackTrace();
+        }
+
+        List<Workspace> workspaceList = null;
+        try {
+            workspaceList = connector.getWorkspaces();
+        } catch (BaseFaradayException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("workspaceList = " + workspaceList);
 
     }
 }

@@ -1,12 +1,12 @@
-package burp.models;
+package burp.faraday.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SessionInfo {
-
-    //{"csrf_token":"","email":null,"name":"faraday","role":"admin","roles":["admin"],"state_opt":0,"username":"faraday"}
 
     @JsonProperty("csrf_token")
     private String csrfToken;

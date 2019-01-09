@@ -1,10 +1,12 @@
 package burp;
 
-import burp.models.ExtensionSettings;
+import burp.faraday.FaradayConnector;
+import burp.faraday.FaradayExtensionUI;
+import burp.faraday.models.ExtensionSettings;
 
 import java.io.PrintWriter;
 
-public class BurpExtender implements IBurpExtender, IExtensionStateListener {
+public class BurpExtender implements IBurpExtender, IExtensionStateListener, IScannerListener {
 
     private static final String EXTENSION_NAME = "Faraday for Burp v1.5";
 
@@ -288,5 +290,9 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener {
         this.stdout.println("[EXTENDER] " + msg);
     }
 
+    @Override
+    public void newScanIssue(IScanIssue issue) {
+
+    }
 }
 

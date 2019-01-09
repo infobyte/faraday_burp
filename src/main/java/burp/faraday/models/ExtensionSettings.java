@@ -1,4 +1,4 @@
-package burp.models;
+package burp.faraday.models;
 
 import burp.IBurpExtenderCallbacks;
 
@@ -80,6 +80,10 @@ public class ExtensionSettings {
         }
 
         return value;
+    }
+
+    public void resetCookie() {
+        setCookie("");
     }
 
 }
