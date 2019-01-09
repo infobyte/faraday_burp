@@ -1,0 +1,27 @@
+plugins {
+    id 'java'
+}
+
+group 'burp'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'net.portswigger.burp.extender:burp-extender-api:1.7.13'
+
+    compile group: 'org.glassfish.jersey.core', name: 'jersey-client', version: '2.27'
+    compile group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.27'
+    compile group: 'org.glassfish.jersey.media', name: 'jersey-media-json-jackson', version: '2.27'
+
+}
+
+task fatJar(type: Jar) {
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
