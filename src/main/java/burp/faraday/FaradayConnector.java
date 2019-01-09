@@ -155,6 +155,8 @@ public class FaradayConnector {
             throw new InvalidFaradayException();
         }
 
+        log("Fetching workspaces");
+
         Response response = get("v2/ws", true);
 
         Workspace[] workspaceList = response.readEntity(Workspace[].class);

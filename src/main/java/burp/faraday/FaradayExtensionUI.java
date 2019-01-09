@@ -1,19 +1,18 @@
 package burp.faraday;
 
 import burp.ITab;
-import burp.faraday.models.ExtensionSettings;
-import burp.faraday.models.FaradayConnectorStatus;
 import burp.faraday.exceptions.BaseFaradayException;
 import burp.faraday.exceptions.InvalidCredentialsException;
 import burp.faraday.exceptions.InvalidFaradayException;
 import burp.faraday.exceptions.SecondFactorRequiredException;
+import burp.faraday.models.ExtensionSettings;
+import burp.faraday.models.FaradayConnectorStatus;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 public class FaradayExtensionUI implements ITab {
 
@@ -83,7 +82,6 @@ public class FaradayExtensionUI implements ITab {
                 return;
             }
             getSession();
-            loadWorkspaces();
         }
     }
 
@@ -169,7 +167,7 @@ public class FaradayExtensionUI implements ITab {
     private Component setupSettingsPanel() {
         JPanel settingsPannel = new JPanel();
         settingsPannel.setBorder(BorderFactory.createTitledBorder("Extension Settings"));
-        JCheckBox inScopeCheckbox = new JCheckBox("Only in scope");
+        JCheckBox inScopeCheckbox = new JCheckBox("Only in Burp scope");
 
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
         importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected()));
@@ -277,7 +275,6 @@ public class FaradayExtensionUI implements ITab {
         JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
 
         getSession();
-        loadWorkspaces();
     }
 
     private void getSession() {
@@ -295,6 +292,7 @@ public class FaradayExtensionUI implements ITab {
         statusButton.setText("Logout");
         setStatus("Logged in");
         this.status = FaradayConnectorStatus.LOGGED_IN;
+        loadWorkspaces();
         enablePanel(settingsPannel);
 
         extensionSettings.setUsername(usernameText.getText());
@@ -341,6 +339,7 @@ public class FaradayExtensionUI implements ITab {
 
         faradayConnector.logout();
         extensionSettings.resetCookie();
+        workspaceCombo.removeAllItems();
         disablePanel(settingsPannel);
     }
 
@@ -358,10 +357,12 @@ public class FaradayExtensionUI implements ITab {
             List<Workspace> workspaceList = faradayConnector.getWorkspaces();
             workspaceList.forEach(workspaceCombo::addItem);
 
-            workspaceList.stream()
-                    .filter(workspace -> workspace.getName().equals(currentWorkspaceName))
-                    .findFirst()
-                    .ifPresent(workspace -> workspaceCombo.setSelectedItem(workspace));
+            if (!currentWorkspaceName.isEmpty()) {
+                workspaceList.stream()
+                        .filter(workspace -> workspace.getName().equals(currentWorkspaceName))
+                        .findFirst()
+                        .ifPresent(workspace -> workspaceCombo.setSelectedItem(workspace));
+            }
 
 
         } catch (BaseFaradayException e) {
