@@ -11,6 +11,7 @@ public class ExtensionSettings {
     private static final String KEY_FARADAY_URL = "faraday_url";
     private static final String KEY_USERNAME = "faraday_username";
     private static final String KEY_COOKIE = "faraday_cookie";
+    private static final String KEY_CURRENT_WORKSPACE = "faraday_current_workspace";
 
 
     public ExtensionSettings(IBurpExtenderCallbacks callbacks) {
@@ -50,16 +51,23 @@ public class ExtensionSettings {
         callbacks.saveExtensionSetting(KEY_COOKIE, cookie);
     }
 
-    public void save() {
-        callbacks.saveExtensionSetting(KEY_FARADAY_URL, getFaradayURL());
-        callbacks.saveExtensionSetting(KEY_USERNAME, getUsername());
-        callbacks.saveExtensionSetting(KEY_COOKIE, getCookie());
+    public String getCurrentWorkspace() {
+        return getSetting(KEY_CURRENT_WORKSPACE);
+    }
+
+    public void setCurrentWorkspace(String currentWorkspace) {
+        if (currentWorkspace != null) {
+            currentWorkspace = currentWorkspace.trim();
+        }
+
+        callbacks.saveExtensionSetting(KEY_CURRENT_WORKSPACE, currentWorkspace);
     }
 
     public void restore() {
         callbacks.saveExtensionSetting(KEY_FARADAY_URL, DEFAULT_FARADAY_URL);
         callbacks.saveExtensionSetting(KEY_USERNAME, "");
         callbacks.saveExtensionSetting(KEY_COOKIE, "");
+        callbacks.saveExtensionSetting(KEY_CURRENT_WORKSPACE, "");
     }
 
     private String getSetting(final String key) {

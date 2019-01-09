@@ -29,6 +29,8 @@ public class FaradayConnector {
     private String cookie = null;
     private SessionInfo sessionInfo = null;
 
+    private Workspace currentWorkspace = null;
+
     public FaradayConnector(PrintWriter stdout) {
         this.stdout = stdout;
 
@@ -182,6 +184,14 @@ public class FaradayConnector {
 
     public void setCookie(String cookie) {
         this.cookie = cookie;
+    }
+
+    public Workspace getCurrentWorkspace() {
+        return currentWorkspace;
+    }
+
+    public void setCurrentWorkspace(Workspace currentWorkspace) {
+        this.currentWorkspace = currentWorkspace;
     }
 }
 

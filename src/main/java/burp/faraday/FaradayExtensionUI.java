@@ -13,6 +13,7 @@ import java.awt.*;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 public class FaradayExtensionUI implements ITab {
 
@@ -180,6 +181,8 @@ public class FaradayExtensionUI implements ITab {
         workspaceCombo = new JComboBox<>();
         workspaceCombo.setEnabled(false);
 
+        workspaceCombo.addActionListener(actionEvent -> onWorkspaceSelected((Workspace) workspaceCombo.getSelectedItem()));
+
         GroupLayout layout = new GroupLayout(settingsPannel);
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
@@ -297,7 +300,6 @@ public class FaradayExtensionUI implements ITab {
         extensionSettings.setUsername(usernameText.getText());
         extensionSettings.setFaradayURL(faradayUrlText.getText());
         extensionSettings.setCookie(faradayConnector.getCookie());
-        extensionSettings.save();
     }
 
     private void connect() {
@@ -348,15 +350,28 @@ public class FaradayExtensionUI implements ITab {
     }
 
     private void loadWorkspaces() {
+        String currentWorkspaceName = extensionSettings.getCurrentWorkspace();
+
         workspaceCombo.removeAllItems();
 
         try {
             List<Workspace> workspaceList = faradayConnector.getWorkspaces();
             workspaceList.forEach(workspaceCombo::addItem);
 
+            workspaceList.stream()
+                    .filter(workspace -> workspace.getName().equals(currentWorkspaceName))
+                    .findFirst()
+                    .ifPresent(workspace -> workspaceCombo.setSelectedItem(workspace));
+
+
         } catch (BaseFaradayException e) {
             log("Could not fetch workspaces: " + e);
         }
+    }
+
+    private void onWorkspaceSelected(Workspace workspace) {
+        faradayConnector.setCurrentWorkspace(workspace);
+        extensionSettings.setCurrentWorkspace(workspace.getName());
     }
 
     private void onImportCurrentVulns(boolean onlyInScope) {
