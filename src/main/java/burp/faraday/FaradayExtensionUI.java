@@ -1,5 +1,7 @@
 package burp.faraday;
 
+import burp.IBurpExtenderCallbacks;
+import burp.IScanIssue;
 import burp.ITab;
 import burp.faraday.exceptions.*;
 import burp.faraday.models.ExtensionSettings;
@@ -10,6 +12,7 @@ import java.awt.*;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class FaradayExtensionUI implements ITab {
 
@@ -24,6 +27,7 @@ public class FaradayExtensionUI implements ITab {
 
     private JPanel tab;
     private PrintWriter stdout;
+    private IBurpExtenderCallbacks callbacks;
     private final FaradayConnector faradayConnector;
     private final ExtensionSettings extensionSettings;
 
@@ -35,8 +39,9 @@ public class FaradayExtensionUI implements ITab {
 
     private FaradayConnectorStatus status = FaradayConnectorStatus.DISCONNECTED;
 
-    public FaradayExtensionUI(PrintWriter stdout, FaradayConnector faradayConnector, ExtensionSettings extensionSettings) {
+    public FaradayExtensionUI(PrintWriter stdout, IBurpExtenderCallbacks callbacks, FaradayConnector faradayConnector, ExtensionSettings extensionSettings) {
         this.stdout = stdout;
+        this.callbacks = callbacks;
         this.faradayConnector = faradayConnector;
         this.extensionSettings = extensionSettings;
 
@@ -295,6 +300,7 @@ public class FaradayExtensionUI implements ITab {
             return;
         }
 
+        extensionSettings.setUsername(username);
         JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
 
         getSession();
@@ -405,7 +411,13 @@ public class FaradayExtensionUI implements ITab {
     }
 
     private void onImportCurrentVulns(boolean onlyInScope) {
-        // TODO
+        List<IScanIssue> issues = Arrays.asList(callbacks.getScanIssues(null));
+
+        if (onlyInScope) {
+            issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
+        }
+
+        issues.stream().map(VulnerabilityMapper::fromIssue).forEach(faradayConnector::addVulnToWorkspace);
     }
 
     @Override

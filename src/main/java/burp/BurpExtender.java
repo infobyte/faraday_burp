@@ -2,12 +2,13 @@ package burp;
 
 import burp.faraday.FaradayConnector;
 import burp.faraday.FaradayExtensionUI;
+import burp.faraday.VulnerabilityMapper;
 import burp.faraday.models.ExtensionSettings;
+import burp.faraday.models.vulnerability.Vulnerability;
 
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static burp.IContextMenuInvocation.*;
@@ -31,12 +32,13 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         callbacks.setExtensionName(EXTENSION_NAME);
 
         this.callbacks = callbacks;
-        helpers = callbacks.getHelpers();
+        this.helpers = callbacks.getHelpers();
+        VulnerabilityMapper.setHelpers(helpers);
 
         stdout = new PrintWriter(callbacks.getStdout(), true);
         this.faradayConnector = new FaradayConnector(stdout);
         this.extensionSettings = new ExtensionSettings(callbacks);
-        this.faradayExtensionUI = new FaradayExtensionUI(stdout, faradayConnector, extensionSettings);
+        this.faradayExtensionUI = new FaradayExtensionUI(stdout, callbacks, faradayConnector, extensionSettings);
 
         callbacks.addSuiteTab(faradayExtensionUI);
 
@@ -65,7 +67,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         switch (ctx) {
             case CONTEXT_SCANNER_RESULTS:
                 menuItem = new JMenuItem("Send issue to Faraday", null);
-                menuItem.addActionListener(actionEvent -> Arrays.stream(invocation.getSelectedIssues()).forEach(this::sendVulnToFaraday));
+                menuItem.addActionListener(actionEvent -> onSendVulnsToFaraday(invocation.getSelectedIssues()));
                 menu.add(menuItem);
                 break;
 
@@ -73,7 +75,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             case CONTEXT_PROXY_HISTORY:
             case CONTEXT_MESSAGE_VIEWER_REQUEST:
                 menuItem = new JMenuItem("Send request to Faraday", null);
-                menuItem.addActionListener(actionEvent -> Arrays.stream(invocation.getSelectedMessages()).forEach(this::sendRequestToFaraday));
+                menuItem.addActionListener(actionEvent -> onSendRequestsToFaraday(invocation.getSelectedMessages()));
                 menu.add(menuItem);
                 break;
 
@@ -82,12 +84,18 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         return menu;
     }
 
-    private void sendVulnToFaraday(IScanIssue issue) {
-
+    private void onSendVulnsToFaraday(IScanIssue[] issues) {
+        for (IScanIssue issue : issues) {
+            Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
+            faradayConnector.addVulnToWorkspace(vulnerability);
+        }
     }
 
-    private void sendRequestToFaraday(IHttpRequestResponse messages) {
-
+    private void onSendRequestsToFaraday(IHttpRequestResponse[] messages) {
+        for (IHttpRequestResponse message : messages) {
+            Vulnerability vulnerability = VulnerabilityMapper.fromRequest(message);
+            faradayConnector.addVulnToWorkspace(vulnerability);
+        }
     }
 //
 //    private void eventScan(IContextMenuInvocation invocation, byte ctx) {

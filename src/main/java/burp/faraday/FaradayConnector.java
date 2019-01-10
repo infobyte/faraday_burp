@@ -1,10 +1,15 @@
 package burp.faraday;
 
 
+import burp.faraday.models.CreatedObjectEntity;
 import burp.faraday.models.ServerInfo;
 import burp.faraday.models.SessionInfo;
 import burp.faraday.models.User;
 import burp.faraday.exceptions.*;
+import burp.faraday.models.vulnerability.Host;
+import burp.faraday.models.vulnerability.Vulnerability;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
 
 import javax.ws.rs.ProcessingException;
@@ -12,6 +17,7 @@ import javax.ws.rs.client.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
@@ -78,6 +84,25 @@ public class FaradayConnector {
 
     }
 
+    private Invocation.Builder buildRequest(final WebTarget target, boolean authenticated) {
+        Invocation.Builder request = target
+                .request(MediaType.APPLICATION_JSON);
+
+        if (authenticated) {
+            if (this.cookie == null) {
+                throw new IllegalStateException("Attempt to perform an authenticated request without a cookie.");
+            }
+            request = request.cookie("session", this.cookie);
+        }
+
+        return request;
+    }
+
+    private Invocation.Builder buildRequest(final String method, boolean authenticated) {
+        WebTarget target = buildTargetForMethod(method);
+        return buildRequest(target, authenticated);
+    }
+
     public void login(final String username, final String password) throws BaseFaradayException {
 
         if (!this.urlIsValid) {
@@ -109,13 +134,32 @@ public class FaradayConnector {
 
     }
 
+    public Response post(final WebTarget target, final boolean authenticated, Object entity) throws BaseFaradayException {
+
+        Response response;
+        try {
+            response = buildRequest(target, authenticated).post(Entity.entity(entity, MediaType.APPLICATION_JSON));
+        } catch (ProcessingException e) {
+            throw new InvalidFaradayException();
+        }
+
+        if (response.getStatus() == Response.Status.CREATED.getStatusCode()) {
+            return response;
+        }
+
+        log("code:" + response.getStatus());
+        log("body: " + response.readEntity(String.class));
+
+        return null;
+    }
+
     public void getSession() throws BaseFaradayException {
 
         log("Fetching session info");
 
         Response response = get("session", true);
 
-        if (response.getStatus() == 401) {
+        if (response.getStatus() == Response.Status.UNAUTHORIZED.getStatusCode()) {
             log("Cookie expired.");
             this.cookie = "";
             throw new CookieExpiredException();
@@ -135,22 +179,8 @@ public class FaradayConnector {
     }
 
     private Response get(final String method, final boolean authenticated) throws FaradayConnectionException {
-        WebTarget target = buildTargetForMethod(method);
-
-        log("GET " + target.getUri().toString());
-
         try {
-            Invocation.Builder request = target
-                    .request(MediaType.APPLICATION_JSON);
-
-            if (authenticated) {
-                if (this.cookie == null) {
-                    throw new IllegalStateException("Attempt to perform an authenticated request without a cookie.");
-                }
-                request = request.cookie("session", this.cookie);
-            }
-
-            return request.get();
+            return buildRequest(method, authenticated).get();
         } catch (ProcessingException e) {
             e.printStackTrace(this.stdout);
             throw new FaradayConnectionException();
@@ -201,6 +231,38 @@ public class FaradayConnector {
 
     public void setCurrentWorkspace(Workspace currentWorkspace) {
         this.currentWorkspace = currentWorkspace;
+    }
+
+    public void addVulnToWorkspace(Vulnerability vulnerability) {
+        try {
+            final int hostId = createHost(vulnerability.getHost());
+        } catch (InvalidFaradayException e) {
+            e.printStackTrace();
+        } catch (BaseFaradayException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private int createHost(final Host host) throws BaseFaradayException {
+        log("Creating host: " + host.toString());
+
+        WebTarget target = this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName()).path("hosts/");
+
+        log("POST " + target.getUri().toString());
+
+        Response response = post(target, true, host);
+
+        if (response != null) {
+
+            final CreatedObjectEntity createdObjectEntity = response.readEntity(CreatedObjectEntity.class);
+
+            log("Created host with id: " + createdObjectEntity.getId());
+
+            return createdObjectEntity.getId();
+
+        }
+
+        return 0;
     }
 }
 
