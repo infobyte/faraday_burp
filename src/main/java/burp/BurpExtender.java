@@ -4,9 +4,15 @@ import burp.faraday.FaradayConnector;
 import burp.faraday.FaradayExtensionUI;
 import burp.faraday.models.ExtensionSettings;
 
+import javax.swing.*;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
-public class BurpExtender implements IBurpExtender, IExtensionStateListener, IScannerListener {
+import static burp.IContextMenuInvocation.*;
+
+public class BurpExtender implements IBurpExtender, IExtensionStateListener, IScannerListener, IContextMenuFactory {
 
     private static final String EXTENSION_NAME = "Faraday for Burp v1.5";
 
@@ -30,26 +36,14 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         stdout = new PrintWriter(callbacks.getStdout(), true);
         this.faradayConnector = new FaradayConnector(stdout);
         this.extensionSettings = new ExtensionSettings(callbacks);
-        this.faradayExtensionUI = new FaradayExtensionUI(stdout,faradayConnector, extensionSettings);
+        this.faradayExtensionUI = new FaradayExtensionUI(stdout, faradayConnector, extensionSettings);
 
         callbacks.addSuiteTab(faradayExtensionUI);
 
-
-//
-//        if (isFirstRun()) {
-//            restoreConfig();
-//            callbacks.saveExtensionSetting("first_run", "1");
-//        }
-//        loadConfig();
-//
-
-
         log(EXTENSION_NAME + " Loaded");
-//        stdout.println("RPCServer: " + rpcServerTxt.getText());
-//        stdout.println("Import new vulnerabilities detected: " + boolString(callbacks.loadExtensionSetting("import_new_vulns")));
 
-//        callbacks.registerContextMenuFactory(this);
 //        callbacks.registerScannerListener(this);
+        callbacks.registerContextMenuFactory(this);
         callbacks.registerExtensionStateListener(this);
     }
 
@@ -59,24 +53,42 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         faradayConnector.logout();
 
     }
-//
-//    @Override
-//    public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
-//        final ArrayList<JMenuItem> menu = new ArrayList<>();
-//
-//        // Which part of the interface the user selects
-//        byte ctx = invocation.getInvocationContext();
-//
-//        if (ctx == CONTEXT_TARGET_SITE_MAP_TABLE || ctx == CONTEXT_PROXY_HISTORY || ctx == CONTEXT_MESSAGE_VIEWER_REQUEST || ctx == CONTEXT_SCANNER_RESULTS) {
-//            JMenuItem faradayMenu = new JMenuItem("Send to Faraday", null);
-//
-//            faradayMenu.addActionListener(actionEvent -> eventScan(invocation, ctx));
-//
-//            menu.add(faradayMenu);
-//        }
-//
-//        return menu;
-//    }
+
+    @Override
+    public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
+        final ArrayList<JMenuItem> menu = new ArrayList<>();
+
+        // Which part of the interface the user selects
+        byte ctx = invocation.getInvocationContext();
+
+        JMenuItem menuItem;
+        switch (ctx) {
+            case CONTEXT_SCANNER_RESULTS:
+                menuItem = new JMenuItem("Send issue to Faraday", null);
+                menuItem.addActionListener(actionEvent -> Arrays.stream(invocation.getSelectedIssues()).forEach(this::sendVulnToFaraday));
+                menu.add(menuItem);
+                break;
+
+            case CONTEXT_TARGET_SITE_MAP_TABLE:
+            case CONTEXT_PROXY_HISTORY:
+            case CONTEXT_MESSAGE_VIEWER_REQUEST:
+                menuItem = new JMenuItem("Send request to Faraday", null);
+                menuItem.addActionListener(actionEvent -> Arrays.stream(invocation.getSelectedMessages()).forEach(this::sendRequestToFaraday));
+                menu.add(menuItem);
+                break;
+
+        }
+
+        return menu;
+    }
+
+    private void sendVulnToFaraday(IScanIssue issue) {
+
+    }
+
+    private void sendRequestToFaraday(IHttpRequestResponse messages) {
+
+    }
 //
 //    private void eventScan(IContextMenuInvocation invocation, byte ctx) {
 //        if (ctx == CONTEXT_SCANNER_RESULTS) {

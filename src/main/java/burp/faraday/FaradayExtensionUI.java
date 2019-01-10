@@ -304,7 +304,7 @@ public class FaradayExtensionUI implements ITab {
 
         try {
             faradayConnector.getSession();
-        }catch (CookieExpiredException e){
+        } catch (CookieExpiredException e) {
             extensionSettings.resetCookie();
             log("The session cookie has expired. Please login again.");
             return;
@@ -314,6 +314,7 @@ public class FaradayExtensionUI implements ITab {
             return;
         }
 
+        faradayUrlText.setEditable(false);
         usernameText.setEditable(false);
         passwordField.setEditable(false);
 
