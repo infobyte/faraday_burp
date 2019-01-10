@@ -7,6 +7,7 @@ import burp.faraday.models.SessionInfo;
 import burp.faraday.models.User;
 import burp.faraday.exceptions.*;
 import burp.faraday.models.vulnerability.Host;
+import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -57,6 +58,10 @@ public class FaradayConnector {
 
     private WebTarget buildTargetForMethod(final String method) {
         return this.baseUrl.path("_api").path(method);
+    }
+
+    private WebTarget buildTargetForCurrentWorkspace() {
+        return this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName());
     }
 
     public void validateFaradayURL() throws InvalidFaradayException {
@@ -147,10 +152,14 @@ public class FaradayConnector {
             return response;
         }
 
+        if (response.getStatus() == Response.Status.CONFLICT.getStatusCode()) {
+            return response;
+        }
+
         log("code:" + response.getStatus());
         log("body: " + response.readEntity(String.class));
 
-        return null;
+        throw new ObjectNotCreatedException();
     }
 
     public void getSession() throws BaseFaradayException {
@@ -236,6 +245,17 @@ public class FaradayConnector {
     public void addVulnToWorkspace(Vulnerability vulnerability) {
         try {
             final int hostId = createHost(vulnerability.getHost());
+
+            final Service service = vulnerability.getService();
+            service.setParent(hostId);
+
+            final int serviceId = createService(service);
+            vulnerability.setParent(serviceId);
+
+            final int vulnId = createVulnerability(vulnerability);
+
+            log("Created vulnerability " + vulnId);
+
         } catch (InvalidFaradayException e) {
             e.printStackTrace();
         } catch (BaseFaradayException e) {
@@ -246,23 +266,39 @@ public class FaradayConnector {
     private int createHost(final Host host) throws BaseFaradayException {
         log("Creating host: " + host.toString());
 
-        WebTarget target = this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName()).path("hosts/");
+        WebTarget target = this.buildTargetForCurrentWorkspace().path("hosts/");
 
+        return createObject(target, host);
+    }
+
+    private int createService(final Service service) throws BaseFaradayException {
+        log("Creating host: " + service.toString());
+
+        WebTarget target = this.buildTargetForCurrentWorkspace().path("services/");
+
+        return createObject(target, service);
+    }
+
+    private int createVulnerability(final Vulnerability vulnerability) throws BaseFaradayException {
+        log("Creating vulnerability: " + vulnerability.toString());
+
+        WebTarget target = this.buildTargetForCurrentWorkspace().path("vulns/");
+
+        return createObject(target, vulnerability);
+    }
+
+    private int createObject(final WebTarget target, final Object object) throws BaseFaradayException {
         log("POST " + target.getUri().toString());
 
-        Response response = post(target, true, host);
+        Response response = post(target, true, object);
 
-        if (response != null) {
+        final CreatedObjectEntity createdObjectEntity = response.readEntity(CreatedObjectEntity.class);
 
-            final CreatedObjectEntity createdObjectEntity = response.readEntity(CreatedObjectEntity.class);
+        log("Created object with id: " + createdObjectEntity.getId());
 
-            log("Created host with id: " + createdObjectEntity.getId());
+        return createdObjectEntity.getId();
 
-            return createdObjectEntity.getId();
-
-        }
-
-        return 0;
     }
+
 }
 

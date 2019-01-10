@@ -9,6 +9,7 @@ import burp.faraday.models.vulnerability.Vulnerability;
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static burp.IContextMenuInvocation.*;
@@ -66,17 +67,22 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         JMenuItem menuItem;
         switch (ctx) {
             case CONTEXT_SCANNER_RESULTS:
-                menuItem = new JMenuItem("Send issue to Faraday", null);
-                menuItem.addActionListener(actionEvent -> onSendVulnsToFaraday(invocation.getSelectedIssues()));
-                menu.add(menuItem);
+                if (invocation.getSelectedIssues().length > 0) {
+
+                    menuItem = new JMenuItem("Send issue to Faraday", null);
+                    menuItem.addActionListener(actionEvent -> onSendVulnsToFaraday(invocation.getSelectedIssues()));
+                    menu.add(menuItem);
+                }
                 break;
 
             case CONTEXT_TARGET_SITE_MAP_TABLE:
             case CONTEXT_PROXY_HISTORY:
             case CONTEXT_MESSAGE_VIEWER_REQUEST:
-                menuItem = new JMenuItem("Send request to Faraday", null);
-                menuItem.addActionListener(actionEvent -> onSendRequestsToFaraday(invocation.getSelectedMessages()));
-                menu.add(menuItem);
+                if (invocation.getSelectedMessages().length > 0) {
+                    menuItem = new JMenuItem("Send request to Faraday", null);
+                    menuItem.addActionListener(actionEvent -> onSendRequestsToFaraday(invocation.getSelectedMessages()));
+                    menu.add(menuItem);
+                }
                 break;
 
         }
@@ -85,6 +91,10 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
     }
 
     private void onSendVulnsToFaraday(IScanIssue[] issues) {
+        if (issues == null) {
+            return;
+        }
+
         for (IScanIssue issue : issues) {
             Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
             faradayConnector.addVulnToWorkspace(vulnerability);
@@ -92,6 +102,10 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
     }
 
     private void onSendRequestsToFaraday(IHttpRequestResponse[] messages) {
+        if (messages == null) {
+            return;
+        }
+
         for (IHttpRequestResponse message : messages) {
             Vulnerability vulnerability = VulnerabilityMapper.fromRequest(message);
             faradayConnector.addVulnToWorkspace(vulnerability);

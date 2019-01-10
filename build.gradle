@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    compile 'net.portswigger.burp.extender:burp-extender-api:1.7.13'
+    compile 'net.portswigger.burp.extender:burp-extender-api:1.7.22'
 
     compile group: 'org.glassfish.jersey.core', name: 'jersey-client', version: '2.27'
     compile group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.27'
