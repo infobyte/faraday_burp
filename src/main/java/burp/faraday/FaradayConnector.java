@@ -115,6 +115,13 @@ public class FaradayConnector {
 
         Response response = get("session", true);
 
+        if (response.getStatus() == 401) {
+            log("Cookie expired.");
+            this.cookie = "";
+            throw new CookieExpiredException();
+        }
+
+
         this.sessionInfo = response.readEntity(SessionInfo.class);
 
         Map<String, NewCookie> cookies = response.getCookies();

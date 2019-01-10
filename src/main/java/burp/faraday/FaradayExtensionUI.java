@@ -1,10 +1,7 @@
 package burp.faraday;
 
 import burp.ITab;
-import burp.faraday.exceptions.BaseFaradayException;
-import burp.faraday.exceptions.InvalidCredentialsException;
-import burp.faraday.exceptions.InvalidFaradayException;
-import burp.faraday.exceptions.SecondFactorRequiredException;
+import burp.faraday.exceptions.*;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.FaradayConnectorStatus;
 
@@ -32,6 +29,7 @@ public class FaradayExtensionUI implements ITab {
 
     private Component loginPanel;
     private Component settingsPannel;
+    private Component otherSettingsPanel;
 
     private JComboBox<Workspace> workspaceCombo;
 
@@ -50,20 +48,23 @@ public class FaradayExtensionUI implements ITab {
 
         this.loginPanel = setupLoginPanel();
         this.settingsPannel = setupSettingsPanel();
+        this.otherSettingsPanel = setupOtherSettingsPanel();
 
         layout.setHorizontalGroup(
                 layout.createParallelGroup()
                         .addComponent(loginPanel)
                         .addComponent(settingsPannel)
+                        .addComponent(otherSettingsPanel)
         );
 
         layout.setVerticalGroup(
                 layout.createSequentialGroup()
                         .addComponent(loginPanel)
                         .addComponent(settingsPannel)
+                        .addComponent(otherSettingsPanel)
         );
 
-        layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel);
+        layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel, otherSettingsPanel);
 
         disablePanel(settingsPannel);
 
@@ -172,9 +173,6 @@ public class FaradayExtensionUI implements ITab {
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
         importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected()));
 
-        JButton restoreButton = new JButton("Restore Settings");
-        restoreButton.addActionListener(actionEvent -> restoreSettings());
-
         JLabel workspaceLabel = new JLabel("Active workspace: ");
         workspaceCombo = new JComboBox<>();
         workspaceCombo.setEnabled(false);
@@ -189,7 +187,6 @@ public class FaradayExtensionUI implements ITab {
 
         layout.setHorizontalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup()
-                        .addComponent(restoreButton)
                         .addComponent(importCurrentVulnsButton)
                         .addComponent(workspaceLabel)
                 )
@@ -200,7 +197,6 @@ public class FaradayExtensionUI implements ITab {
         );
 
         layout.setVerticalGroup(layout.createSequentialGroup()
-                .addComponent(restoreButton)
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                         .addComponent(importCurrentVulnsButton)
                         .addComponent(inScopeCheckbox)
@@ -213,6 +209,33 @@ public class FaradayExtensionUI implements ITab {
         );
 
         return settingsPannel;
+    }
+
+    private Component setupOtherSettingsPanel() {
+        JPanel otherSettingsPanel = new JPanel();
+        otherSettingsPanel.setBorder(BorderFactory.createTitledBorder("Other Settings"));
+
+        JButton restoreButton = new JButton("Restore Settings");
+        restoreButton.addActionListener(actionEvent -> restoreSettings());
+
+        GroupLayout layout = new GroupLayout(otherSettingsPanel);
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+
+        otherSettingsPanel.setLayout(layout);
+
+        layout.setHorizontalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup()
+                        .addComponent(restoreButton)
+                )
+        );
+
+        layout.setVerticalGroup(layout.createSequentialGroup()
+                .addComponent(restoreButton)
+        );
+
+
+        return otherSettingsPanel;
     }
 
     private void onStatusPressed() {
@@ -281,9 +304,14 @@ public class FaradayExtensionUI implements ITab {
 
         try {
             faradayConnector.getSession();
+        }catch (CookieExpiredException e){
+            extensionSettings.resetCookie();
+            log("The session cookie has expired. Please login again.");
+            return;
         } catch (BaseFaradayException e) {
             log("Error acquiring session");
             log(e.toString());
+            return;
         }
 
         usernameText.setEditable(false);
