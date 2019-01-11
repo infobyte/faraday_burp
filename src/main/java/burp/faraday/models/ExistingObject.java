@@ -4,17 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CreatedObjectEntity {
 
+public class ExistingObject {
     @JsonProperty("_id")
     private int id;
 
-    public CreatedObjectEntity() {
-
-    }
-
-    public CreatedObjectEntity(int id) {
-        this.id = id;
+    public ExistingObject() {
     }
 
     public int getId() {
@@ -27,7 +22,7 @@ public class CreatedObjectEntity {
 
     @Override
     public String toString() {
-        return "CreatedObjectEntity{" +
+        return "ExistingObject{" +
                 "id=" + id +
                 '}';
     }

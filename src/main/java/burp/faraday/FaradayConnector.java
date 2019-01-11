@@ -1,16 +1,11 @@
 package burp.faraday;
 
 
-import burp.faraday.models.CreatedObjectEntity;
-import burp.faraday.models.ServerInfo;
-import burp.faraday.models.SessionInfo;
-import burp.faraday.models.User;
 import burp.faraday.exceptions.*;
+import burp.faraday.models.*;
 import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
 
 import javax.ws.rs.ProcessingException;
@@ -18,7 +13,6 @@ import javax.ws.rs.client.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
@@ -139,7 +133,10 @@ public class FaradayConnector {
 
     }
 
-    public Response post(final WebTarget target, final boolean authenticated, Object entity) throws BaseFaradayException {
+    public Response post(final WebTarget target, final boolean authenticated, Object entity)
+            throws InvalidFaradayException,
+            ObjectNotCreatedException,
+            ObjectAlreadyExistsException {
 
         Response response;
         try {
@@ -153,7 +150,7 @@ public class FaradayConnector {
         }
 
         if (response.getStatus() == Response.Status.CONFLICT.getStatusCode()) {
-            return response;
+            throw new ObjectAlreadyExistsException(response.readEntity(ExistingObjectEntity.class));
         }
 
         log("code:" + response.getStatus());
@@ -258,12 +255,13 @@ public class FaradayConnector {
 
         } catch (InvalidFaradayException e) {
             e.printStackTrace();
-        } catch (BaseFaradayException e) {
+        } catch (ObjectNotCreatedException e) {
+            log("Unable to create object tree");
             e.printStackTrace();
         }
     }
 
-    private int createHost(final Host host) throws BaseFaradayException {
+    private int createHost(final Host host) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating host: " + host.toString());
 
         WebTarget target = this.buildTargetForCurrentWorkspace().path("hosts/");
@@ -271,15 +269,15 @@ public class FaradayConnector {
         return createObject(target, host);
     }
 
-    private int createService(final Service service) throws BaseFaradayException {
-        log("Creating host: " + service.toString());
+    private int createService(final Service service) throws InvalidFaradayException, ObjectNotCreatedException {
+        log("Creating service: " + service.toString());
 
         WebTarget target = this.buildTargetForCurrentWorkspace().path("services/");
 
         return createObject(target, service);
     }
 
-    private int createVulnerability(final Vulnerability vulnerability) throws BaseFaradayException {
+    private int createVulnerability(final Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating vulnerability: " + vulnerability.toString());
 
         WebTarget target = this.buildTargetForCurrentWorkspace().path("vulns/");
@@ -287,14 +285,23 @@ public class FaradayConnector {
         return createObject(target, vulnerability);
     }
 
-    private int createObject(final WebTarget target, final Object object) throws BaseFaradayException {
+    private int createObject(final WebTarget target, final Object object) throws InvalidFaradayException, ObjectNotCreatedException {
         log("POST " + target.getUri().toString());
 
-        Response response = post(target, true, object);
+        Response response;
+        try {
+            response = post(target, true, object);
+        } catch (ObjectAlreadyExistsException e) {
+            final ExistingObjectEntity existingObject = e.getExistingObjectEntity();
+            return existingObject.getObject().getId();
+        }
 
+        response.bufferEntity();
+        final String responseString = response.readEntity(String.class);
         final CreatedObjectEntity createdObjectEntity = response.readEntity(CreatedObjectEntity.class);
 
-        log("Created object with id: " + createdObjectEntity.getId());
+        log("Response: " + responseString);
+        log("Created object: " + createdObjectEntity.toString());
 
         return createdObjectEntity.getId();
 

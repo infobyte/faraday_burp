@@ -67,22 +67,19 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         JMenuItem menuItem;
         switch (ctx) {
             case CONTEXT_SCANNER_RESULTS:
-                if (invocation.getSelectedIssues().length > 0) {
+                menuItem = new JMenuItem("Send issue to Faraday", null);
+                menuItem.addActionListener(actionEvent -> onSendVulnsToFaraday(invocation.getSelectedIssues()));
+                menu.add(menuItem);
 
-                    menuItem = new JMenuItem("Send issue to Faraday", null);
-                    menuItem.addActionListener(actionEvent -> onSendVulnsToFaraday(invocation.getSelectedIssues()));
-                    menu.add(menuItem);
-                }
                 break;
 
             case CONTEXT_TARGET_SITE_MAP_TABLE:
             case CONTEXT_PROXY_HISTORY:
             case CONTEXT_MESSAGE_VIEWER_REQUEST:
-                if (invocation.getSelectedMessages().length > 0) {
-                    menuItem = new JMenuItem("Send request to Faraday", null);
-                    menuItem.addActionListener(actionEvent -> onSendRequestsToFaraday(invocation.getSelectedMessages()));
-                    menu.add(menuItem);
-                }
+                menuItem = new JMenuItem("Send request to Faraday", null);
+                menuItem.addActionListener(actionEvent -> onSendRequestsToFaraday(invocation.getSelectedMessages()));
+                menu.add(menuItem);
+
                 break;
 
         }
