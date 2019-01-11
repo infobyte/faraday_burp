@@ -1,7 +1,12 @@
 image: openjdk:9-jdk
 
 before_script:
-  - /gradlew fatJar
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+
+cache:
+  paths:
+    - .gradle/wrapper
+    - .gradle/caches
 
 build:
   stage: build
@@ -11,7 +16,7 @@ build:
     - ./gradlew fatJar
   artifacts:
     paths:
-      - build/libs/burp-all-1.0-SNAPSHOT.jar
+      - build/libs/*.jar
     expire_in: 1 week
 
 
