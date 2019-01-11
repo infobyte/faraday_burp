@@ -13,7 +13,6 @@ import java.awt.event.ItemEvent;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class FaradayExtensionUI implements ITab {

@@ -1,0 +1,19 @@
+image: openjdk:9-jdk
+
+before_script:
+  - /gradlew fatJar
+
+build:
+  stage: build
+  only:
+    - master
+  script:
+    - /gradlew fatJar
+  artifacts:
+    paths:
+      - build/libs/burp-all-1.0-SNAPSHOT.jar
+    expire_in: 1 week
+
+
+stages:
+  - build
