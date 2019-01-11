@@ -86,6 +86,9 @@ public class FaradayExtensionUI implements ITab {
             } catch (InvalidFaradayException e) {
                 JOptionPane.showMessageDialog(tab, "Faraday Server is down.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
+            } catch (ServerTooOldException e) {
+                JOptionPane.showMessageDialog(tab, "Faraday server is too old to be used with this extension. Please upgrade to the latest version.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
             }
             getSession();
         }
@@ -349,6 +352,9 @@ public class FaradayExtensionUI implements ITab {
             faradayConnector.validateFaradayURL();
         } catch (InvalidFaradayException e) {
             JOptionPane.showMessageDialog(tab, "Faraday URL is not a valid Faraday server.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        } catch (ServerTooOldException e) {
+            JOptionPane.showMessageDialog(tab, "Faraday server is too old to be used with this extension. Please upgrade to the latest version.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 

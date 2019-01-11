@@ -18,6 +18,8 @@ dependencies {
     compile group: 'org.glassfish.jersey.inject', name: 'jersey-hk2', version: '2.27'
     compile group: 'org.glassfish.jersey.media', name: 'jersey-media-json-jackson', version: '2.27'
 
+    compile group: 'com.github.zafarkhaja', name: 'java-semver', version: '0.9.0'
+
 }
 
 task fatJar(type: Jar) {

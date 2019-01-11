@@ -6,6 +6,7 @@ import burp.faraday.models.*;
 import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
+import com.github.zafarkhaja.semver.Version;
 import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
 
 import javax.ws.rs.ProcessingException;
@@ -19,6 +20,8 @@ import java.util.List;
 import java.util.Map;
 
 public class FaradayConnector {
+
+    private static final Version MINIMUM_VERSION = Version.valueOf("3.4.0");
 
     private final PrintWriter stdout;
     private WebTarget baseUrl;
@@ -58,7 +61,7 @@ public class FaradayConnector {
         return this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName());
     }
 
-    public void validateFaradayURL() throws InvalidFaradayException {
+    public void validateFaradayURL() throws InvalidFaradayException, ServerTooOldException {
 
         WebTarget infoEndpoint = buildTargetForMethod("v2/info");
 
@@ -74,6 +77,14 @@ public class FaradayConnector {
         ServerInfo serverInfo = response.readEntity(ServerInfo.class);
 
         log(serverInfo.toString());
+        final Version serverVersion = Version.valueOf(serverInfo.getVersion().split("-")[1]);
+
+        log("Faraday Server version: " + serverVersion.toString());
+
+        if (serverVersion.lessThan(MINIMUM_VERSION)) {
+            log("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
+            throw new ServerTooOldException();
+        }
 
         this.urlIsValid = response.getStatus() == 200;
 
