@@ -8,7 +8,7 @@ build:
   only:
     - master
   script:
-    - /gradlew fatJar
+    - ./gradlew fatJar
   artifacts:
     paths:
       - build/libs/burp-all-1.0-SNAPSHOT.jar
