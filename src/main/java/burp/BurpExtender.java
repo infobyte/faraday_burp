@@ -44,7 +44,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
 
         log(EXTENSION_NAME + " Loaded");
 
-//        callbacks.registerScannerListener(this);
+        callbacks.registerScannerListener(this);
         callbacks.registerContextMenuFactory(this);
         callbacks.registerExtensionStateListener(this);
     }
@@ -114,7 +114,12 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
 
     @Override
     public void newScanIssue(IScanIssue issue) {
+        if (!extensionSettings.importNewVulns()) {
+            return;
+        }
 
+        Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
+        faradayConnector.addVulnToWorkspace(vulnerability);
     }
 }
 

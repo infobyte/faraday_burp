@@ -7,11 +7,13 @@ public class ExtensionSettings {
     private final IBurpExtenderCallbacks callbacks;
 
     private static final String DEFAULT_FARADAY_URL = "http://localhost:5985";
+    private static final String DEFAULT_IMPORT_NEW_VULNS = "0";
 
     private static final String KEY_FARADAY_URL = "faraday_url";
     private static final String KEY_USERNAME = "faraday_username";
     private static final String KEY_COOKIE = "faraday_cookie";
     private static final String KEY_CURRENT_WORKSPACE = "faraday_current_workspace";
+    private static final String KEY_IMPORT_NEW_VULNS = "faraday_import_new";
 
 
     public ExtensionSettings(IBurpExtenderCallbacks callbacks) {
@@ -63,11 +65,20 @@ public class ExtensionSettings {
         callbacks.saveExtensionSetting(KEY_CURRENT_WORKSPACE, currentWorkspace);
     }
 
+    public boolean importNewVulns() {
+        return getSetting(KEY_IMPORT_NEW_VULNS, DEFAULT_IMPORT_NEW_VULNS).equals("1");
+    }
+
+    public void setImportNewVulns(boolean importNewVulns) {
+        callbacks.saveExtensionSetting(KEY_IMPORT_NEW_VULNS, importNewVulns ? "1" : "0");
+    }
+
     public void restore() {
         callbacks.saveExtensionSetting(KEY_FARADAY_URL, DEFAULT_FARADAY_URL);
         callbacks.saveExtensionSetting(KEY_USERNAME, "");
         callbacks.saveExtensionSetting(KEY_COOKIE, "");
         callbacks.saveExtensionSetting(KEY_CURRENT_WORKSPACE, "");
+        callbacks.saveExtensionSetting(KEY_IMPORT_NEW_VULNS, "0");
     }
 
     private String getSetting(final String key) {

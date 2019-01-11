@@ -9,6 +9,7 @@ import burp.faraday.models.FaradayConnectorStatus;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ItemEvent;
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.List;
@@ -78,6 +79,7 @@ public class FaradayExtensionUI implements ITab {
             log("Faraday Server URL: " + extensionSettings.getFaradayURL());
             log("Username: " + extensionSettings.getUsername());
             log("Cookie: " + extensionSettings.getCookie());
+            log("Import new Vulns: " + extensionSettings.importNewVulns());
 
             faradayConnector.setBaseUrl(extensionSettings.getFaradayURL());
             faradayConnector.setCookie(extensionSettings.getCookie());
@@ -178,6 +180,10 @@ public class FaradayExtensionUI implements ITab {
         settingsPannel.setBorder(BorderFactory.createTitledBorder("Extension Settings"));
         JCheckBox inScopeCheckbox = new JCheckBox("Only in Burp scope");
 
+        JCheckBox importNewVulnsCheckbox = new JCheckBox("Import new vulnerabilities automatically");
+        importNewVulnsCheckbox.addItemListener(itemEvent -> extensionSettings.setImportNewVulns(itemEvent.getStateChange() == ItemEvent.SELECTED));
+        importNewVulnsCheckbox.setSelected(extensionSettings.importNewVulns());
+
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
         importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected()));
 
@@ -195,6 +201,7 @@ public class FaradayExtensionUI implements ITab {
 
         layout.setHorizontalGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup()
+                        .addComponent(importNewVulnsCheckbox)
                         .addComponent(importCurrentVulnsButton)
                         .addComponent(workspaceLabel)
                 )
@@ -205,6 +212,7 @@ public class FaradayExtensionUI implements ITab {
         );
 
         layout.setVerticalGroup(layout.createSequentialGroup()
+                .addComponent(importNewVulnsCheckbox)
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                         .addComponent(importCurrentVulnsButton)
                         .addComponent(inScopeCheckbox)
