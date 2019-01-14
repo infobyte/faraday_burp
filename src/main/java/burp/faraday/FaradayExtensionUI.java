@@ -107,7 +107,8 @@ public class FaradayExtensionUI implements ITab {
         loginPanel.setBorder(BorderFactory.createTitledBorder("Login to Faraday"));
 
         JLabel faradayUrlLabel = new JLabel("Faraday Server URL: ");
-        faradayUrlText = new JTextField("http://localhost:5985");
+        faradayUrlText = new JTextField();
+        faradayUrlText.setText(extensionSettings.getFaradayURL());
 
         JLabel usernameLabel = new JLabel("Username: ");
         usernameText = new JTextField();
@@ -352,6 +353,7 @@ public class FaradayExtensionUI implements ITab {
             e.printStackTrace(stdout);
         }
 
+        JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
         secondFactorField.setEditable(false);
         getSession(false);
     }
@@ -440,7 +442,7 @@ public class FaradayExtensionUI implements ITab {
     private void restoreSettings() {
         logout();
         extensionSettings.restore();
-        //TODO Restore text fields to default values
+        faradayUrlText.setText(extensionSettings.getDefaultFaradayUrl());
     }
 
     private void loadWorkspaces() {

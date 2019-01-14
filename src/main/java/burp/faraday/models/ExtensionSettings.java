@@ -10,8 +10,6 @@ import burp.IBurpExtenderCallbacks;
 
 public class ExtensionSettings {
 
-    //TODO Getters for default settings
-
     private final IBurpExtenderCallbacks callbacks;
 
     private static final String DEFAULT_FARADAY_URL = "http://localhost:5985";
@@ -124,6 +122,10 @@ public class ExtensionSettings {
 
     public void resetCookie() {
         setCookie("");
+    }
+
+    public String getDefaultFaradayUrl() {
+        return DEFAULT_FARADAY_URL;
     }
 
 }

@@ -85,16 +85,20 @@ public class FaradayConnector {
      *
      * @return
      */
-    private WebTarget buildTargetForMethod(final String method) {
-        // TODO if baseUrl is null
+    private WebTarget buildTargetForMethod(final String method) throws InvalidFaradayException {
+        if (this.baseUrl == null) {
+            throw new InvalidFaradayException();
+        }
         return this.baseUrl.path("_api").path(method);
     }
 
     /**
      * @return
      */
-    private WebTarget buildTargetForCurrentWorkspace() {
-        // TODO if baseUrl is null
+    private WebTarget buildTargetForCurrentWorkspace() throws InvalidFaradayException {
+        if (this.baseUrl == null) {
+            throw new InvalidFaradayException();
+        }
         return this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName());
     }
 
@@ -175,7 +179,7 @@ public class FaradayConnector {
      *
      * @return
      */
-    private Invocation.Builder buildRequest(final String method, boolean authenticated) {
+    private Invocation.Builder buildRequest(final String method, boolean authenticated) throws InvalidFaradayException {
         WebTarget target = buildTargetForMethod(method);
         return buildRequest(target, authenticated);
     }
@@ -323,7 +327,7 @@ public class FaradayConnector {
     private Response get(final String method, final boolean authenticated) throws FaradayConnectionException {
         try {
             return buildRequest(method, authenticated).get();
-        } catch (ProcessingException e) {
+        } catch (ProcessingException | InvalidFaradayException e) {
             log(e.getMessage());
 //            e.printStackTrace(this.stdout);
             throw new FaradayConnectionException();
