@@ -34,6 +34,7 @@ public class FaradayConnector {
     private SessionInfo sessionInfo = null;
 
     private Workspace currentWorkspace = null;
+    private FaradayEdition faradayEdition;
 
     public FaradayConnector(PrintWriter stdout) {
         this.stdout = stdout;
@@ -77,7 +78,19 @@ public class FaradayConnector {
         ServerInfo serverInfo = response.readEntity(ServerInfo.class);
 
         log(serverInfo.toString());
-        final Version serverVersion = Version.valueOf(serverInfo.getVersion().split("-")[1]);
+
+        final Version serverVersion;
+
+        if (serverInfo.getVersion().contains("-")) {
+
+            final String[] versionParts = serverInfo.getVersion().split("-");
+
+            serverVersion = Version.valueOf(versionParts[1]);
+            this.faradayEdition = FaradayEdition.fromName(versionParts[0]);
+        } else {
+            serverVersion = Version.valueOf(serverInfo.getVersion());
+            this.faradayEdition = FaradayEdition.WHITE;
+        }
 
         log("Faraday Server version: " + serverVersion.toString());
 
@@ -318,5 +331,8 @@ public class FaradayConnector {
 
     }
 
+    public FaradayEdition getFaradayEdition() {
+        return faradayEdition;
+    }
 }
 
