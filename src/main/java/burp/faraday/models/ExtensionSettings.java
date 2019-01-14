@@ -11,6 +11,7 @@ public class ExtensionSettings {
 
     private static final String KEY_FARADAY_URL = "faraday_url";
     private static final String KEY_USERNAME = "faraday_username";
+    private static final String KEY_PASSWORD = "faraday_password";
     private static final String KEY_COOKIE = "faraday_cookie";
     private static final String KEY_CURRENT_WORKSPACE = "faraday_current_workspace";
     private static final String KEY_IMPORT_NEW_VULNS = "faraday_import_new";
@@ -40,6 +41,17 @@ public class ExtensionSettings {
             username = username.trim();
         }
         callbacks.saveExtensionSetting(KEY_USERNAME, username);
+    }
+
+    public String getPassword() {
+        return getSetting(KEY_PASSWORD);
+    }
+
+    public void setPassword(String password) {
+        if (password != null) {
+            password = password.trim();
+        }
+        callbacks.saveExtensionSetting(KEY_PASSWORD, password);
     }
 
     public String getCookie() {
@@ -76,6 +88,7 @@ public class ExtensionSettings {
     public void restore() {
         callbacks.saveExtensionSetting(KEY_FARADAY_URL, DEFAULT_FARADAY_URL);
         callbacks.saveExtensionSetting(KEY_USERNAME, "");
+        callbacks.saveExtensionSetting(KEY_PASSWORD, "");
         callbacks.saveExtensionSetting(KEY_COOKIE, "");
         callbacks.saveExtensionSetting(KEY_CURRENT_WORKSPACE, "");
         callbacks.saveExtensionSetting(KEY_IMPORT_NEW_VULNS, "0");

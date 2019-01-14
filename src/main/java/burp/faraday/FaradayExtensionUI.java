@@ -106,10 +106,12 @@ public class FaradayExtensionUI implements ITab {
         JLabel usernameLabel = new JLabel("Username: ");
         usernameText = new JTextField();
         usernameText.setEnabled(false);
+        usernameText.setText(extensionSettings.getUsername());
 
         JLabel passwordLabel = new JLabel("Password: ");
         passwordField = new JPasswordField();
         passwordField.setEnabled(false);
+        passwordField.setText(extensionSettings.getPassword());
 
         JLabel secondFactorLabel = new JLabel("2FA Token: ");
         secondFactorField = new JTextField();
@@ -342,6 +344,7 @@ public class FaradayExtensionUI implements ITab {
         enablePanel(settingsPannel);
 
         extensionSettings.setUsername(usernameText.getText());
+        extensionSettings.setPassword(new String(passwordField.getPassword()).trim());
         extensionSettings.setFaradayURL(faradayUrlText.getText());
         extensionSettings.setCookie(faradayConnector.getCookie());
     }
