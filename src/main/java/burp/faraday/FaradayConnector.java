@@ -1,3 +1,9 @@
+/*
+ * Faraday Penetration Test IDE Extension for Burp
+ * Copyright (C) 2019  Infobyte LLC (http://www.infobytesec.com/)
+ * See the file 'LICENSE' for the license information
+ */
+
 package burp.faraday;
 
 
@@ -25,8 +31,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * This class provides the utilities necessary to connect to a Faraday Server and issue
+ * authenticated requests to it.
+ */
 public class FaradayConnector {
 
+    /**
+     * Minimum version required to use the extension.
+     */
     private static final Version MINIMUM_VERSION = Version.valueOf("3.4.0");
 
     private final PrintWriter stdout;
@@ -49,6 +62,11 @@ public class FaradayConnector {
                 .register(JacksonJsonProvider.class);
     }
 
+    /**
+     * Sets the base URL of the Faraday Server we are going to connect.
+     *
+     * @param baseUrl Base URL of the Faraday Server.
+     */
     public void setBaseUrl(final String baseUrl) {
 
         if (baseUrl == null) {
@@ -60,14 +78,32 @@ public class FaradayConnector {
         this.urlIsValid = false;
     }
 
+    /**
+     * Buils a target using the
+     *
+     * @param method
+     *
+     * @return
+     */
     private WebTarget buildTargetForMethod(final String method) {
+        // TODO if baseUrl is null
         return this.baseUrl.path("_api").path(method);
     }
 
+    /**
+     * @return
+     */
     private WebTarget buildTargetForCurrentWorkspace() {
+        // TODO if baseUrl is null
         return this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName());
     }
 
+    /**
+     * Validates that the current baseUrl points to a valid Faraday Server.
+     *
+     * @throws InvalidFaradayException When the URL does not point to a valid Faraday Server.
+     * @throws ServerTooOldException   When the server is running a version lower than 3.4.0
+     */
     public void validateFaradayURL() throws InvalidFaradayException, ServerTooOldException {
 
         WebTarget infoEndpoint = buildTargetForMethod("v2/info");
@@ -113,6 +149,12 @@ public class FaradayConnector {
 
     }
 
+    /**
+     * @param target
+     * @param authenticated
+     *
+     * @return
+     */
     private Invocation.Builder buildRequest(final WebTarget target, boolean authenticated) {
         Invocation.Builder request = target
                 .request(MediaType.APPLICATION_JSON);
@@ -127,11 +169,23 @@ public class FaradayConnector {
         return request;
     }
 
+    /**
+     * @param method
+     * @param authenticated
+     *
+     * @return
+     */
     private Invocation.Builder buildRequest(final String method, boolean authenticated) {
         WebTarget target = buildTargetForMethod(method);
         return buildRequest(target, authenticated);
     }
 
+    /**
+     * @param username
+     * @param password
+     *
+     * @throws BaseFaradayException
+     */
     public void login(final String username, final String password) throws BaseFaradayException {
 
         if (!this.urlIsValid) {
@@ -230,6 +284,9 @@ public class FaradayConnector {
         throw new ObjectNotCreatedException();
     }
 
+    /**
+     * @throws BaseFaradayException
+     */
     public void getSession() throws BaseFaradayException {
 
         log("Fetching session info");
@@ -255,6 +312,14 @@ public class FaradayConnector {
 
     }
 
+    /**
+     * @param method
+     * @param authenticated
+     *
+     * @return
+     *
+     * @throws FaradayConnectionException
+     */
     private Response get(final String method, final boolean authenticated) throws FaradayConnectionException {
         try {
             return buildRequest(method, authenticated).get();
@@ -265,6 +330,11 @@ public class FaradayConnector {
         }
     }
 
+    /**
+     * @return
+     *
+     * @throws BaseFaradayException
+     */
     public List<Workspace> getWorkspaces() throws BaseFaradayException {
         if (!this.urlIsValid) {
             throw new InvalidFaradayException();
@@ -279,10 +349,20 @@ public class FaradayConnector {
         return Arrays.asList(workspaceList);
     }
 
+    /**
+     * @param method
+     *
+     * @return
+     *
+     * @throws FaradayConnectionException
+     */
     private Response get(final String method) throws FaradayConnectionException {
         return get(method, false);
     }
 
+    /**
+     *
+     */
     public void logout() {
         log("Logging out");
 
@@ -290,6 +370,7 @@ public class FaradayConnector {
         this.sessionInfo = null;
         setBaseUrl(null);
     }
+
 
     private void log(final String msg) {
         this.stdout.println("[CONNECTOR] " + msg);
@@ -311,6 +392,9 @@ public class FaradayConnector {
         this.currentWorkspace = currentWorkspace;
     }
 
+    /**
+     * @param vulnerability
+     */
     public void addVulnToWorkspace(Vulnerability vulnerability) {
         try {
             final int hostId = createHost(vulnerability.getHost());
@@ -333,6 +417,14 @@ public class FaradayConnector {
         }
     }
 
+    /**
+     * @param host
+     *
+     * @return
+     *
+     * @throws InvalidFaradayException
+     * @throws ObjectNotCreatedException
+     */
     private int createHost(final Host host) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating host: " + host.toString());
 
@@ -341,6 +433,14 @@ public class FaradayConnector {
         return createObject(target, host);
     }
 
+    /**
+     * @param service
+     *
+     * @return
+     *
+     * @throws InvalidFaradayException
+     * @throws ObjectNotCreatedException
+     */
     private int createService(final Service service) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating service: " + service.toString());
 
@@ -349,6 +449,14 @@ public class FaradayConnector {
         return createObject(target, service);
     }
 
+    /**
+     * @param vulnerability
+     *
+     * @return
+     *
+     * @throws InvalidFaradayException
+     * @throws ObjectNotCreatedException
+     */
     private int createVulnerability(final Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating vulnerability: " + vulnerability.toString());
 
@@ -357,6 +465,15 @@ public class FaradayConnector {
         return createObject(target, vulnerability);
     }
 
+    /**
+     * @param target
+     * @param object
+     *
+     * @return
+     *
+     * @throws InvalidFaradayException
+     * @throws ObjectNotCreatedException
+     */
     private int createObject(final WebTarget target, final Object object) throws InvalidFaradayException, ObjectNotCreatedException {
         log("POST " + target.getUri().toString());
 

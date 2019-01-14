@@ -1,3 +1,9 @@
+/*
+ * Faraday Penetration Test IDE Extension for Burp
+ * Copyright (C) 2019  Infobyte LLC (http://www.infobytesec.com/)
+ * See the file 'LICENSE' for the license information
+ */
+
 package burp;
 
 import burp.faraday.FaradayConnector;
@@ -15,7 +21,9 @@ import static burp.IContextMenuInvocation.*;
 
 public class BurpExtender implements IBurpExtender, IExtensionStateListener, IScannerListener, IContextMenuFactory {
 
-    private static final String EXTENSION_NAME = "Faraday for Burp v1.5";
+    private static final String EXTENSION_VERSION = "2.0";
+
+    private static final String EXTENSION_NAME = "Faraday for Burp v" + EXTENSION_VERSION;
 
     private IBurpExtenderCallbacks callbacks;
     private PrintWriter stdout;
