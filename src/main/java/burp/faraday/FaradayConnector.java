@@ -243,7 +243,6 @@ public class FaradayConnector {
             case 401:
             case 403:
                 log("Invalid credentials.");
-                log(response.readEntity(String.class));
                 throw new InvalidCredentialsException();
             case 200:
                 this.cookie = response.getCookies().get("session").getValue();

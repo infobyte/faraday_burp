@@ -313,6 +313,7 @@ public class FaradayExtensionUI implements ITab {
             usernameText.setEditable(false);
             passwordField.setEditable(false);
             extensionSettings.setUsername(username);
+            secondFactorField.setEditable(true);
 
             JOptionPane.showMessageDialog(tab, "The 2FA token is required", "Error", JOptionPane.INFORMATION_MESSAGE);
             this.status = FaradayConnectorStatus.NEEDS_2FA;
@@ -348,7 +349,8 @@ public class FaradayExtensionUI implements ITab {
             faradayConnector.verify2FAToken(token);
         } catch (InvalidCredentialsException e) {
             log("Error when validating token");
-            e.printStackTrace(stdout);
+            JOptionPane.showMessageDialog(tab, "Invalid token.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         } catch (BaseFaradayException e) {
             e.printStackTrace(stdout);
         }
@@ -427,6 +429,9 @@ public class FaradayExtensionUI implements ITab {
         usernameText.setEditable(true);
         passwordField.setEditable(true);
         passwordField.setText("");
+
+        secondFactorField.setEnabled(false);
+        secondFactorField.setText("");
 
         setStatus("Not connected");
 
