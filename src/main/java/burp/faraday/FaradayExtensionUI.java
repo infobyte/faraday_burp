@@ -1,3 +1,9 @@
+/*
+ * Faraday Penetration Test IDE Extension for Burp
+ * Copyright (C) 2019  Infobyte LLC (http://www.infobytesec.com/)
+ * See the file 'LICENSE' for the license information
+ */
+
 package burp.faraday;
 
 import burp.IBurpExtenderCallbacks;
@@ -92,7 +98,7 @@ public class FaradayExtensionUI implements ITab {
                 JOptionPane.showMessageDialog(tab, "Faraday server is too old to be used with this extension. Please upgrade to the latest version.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            getSession();
+            getSession(false);
         }
     }
 
@@ -262,7 +268,10 @@ public class FaradayExtensionUI implements ITab {
                 connect();
                 break;
             case CONNECTED:
-                login();
+                login(false);
+                break;
+            case NEEDS_2FA:
+                verifyToken();
                 break;
             case LOGGED_IN:
                 logout();
@@ -270,7 +279,7 @@ public class FaradayExtensionUI implements ITab {
         }
     }
 
-    private void login() {
+    private void login(boolean isSecondAttempt) {
         String username = usernameText.getText().trim();
 
         if (username.isEmpty()) {
@@ -298,7 +307,14 @@ public class FaradayExtensionUI implements ITab {
 
             secondFactorField.setEnabled(true);
             setStatus("2FA Token required");
+            statusButton.setText("Verify Token");
+
+            usernameText.setEditable(false);
+            passwordField.setEditable(false);
+            extensionSettings.setUsername(username);
+
             JOptionPane.showMessageDialog(tab, "The 2FA token is required", "Error", JOptionPane.INFORMATION_MESSAGE);
+            this.status = FaradayConnectorStatus.NEEDS_2FA;
             return;
 
         } catch (InvalidFaradayException e) {
@@ -316,15 +332,41 @@ public class FaradayExtensionUI implements ITab {
         extensionSettings.setUsername(username);
         JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
 
-        getSession();
+        getSession(isSecondAttempt);
     }
 
-    private void getSession() {
+    private void verifyToken() {
+        String token = secondFactorField.getText().trim();
+
+        if (token.isEmpty()) {
+            JOptionPane.showMessageDialog(tab, "Token is empty.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            faradayConnector.verify2FAToken(token);
+        } catch (InvalidCredentialsException e) {
+            log("Error when validating token");
+            e.printStackTrace(stdout);
+        } catch (BaseFaradayException e) {
+            e.printStackTrace(stdout);
+        }
+
+        secondFactorField.setEditable(false);
+        getSession(false);
+    }
+
+    private void getSession(boolean isSecondAttempt) {
 
         try {
             faradayConnector.getSession();
         } catch (CookieExpiredException e) {
-            extensionSettings.resetCookie();
+//            extensionSettings.resetCookie();
+            if (isSecondAttempt) {
+                log("Unable to renew the cookie.");
+                return;
+            }
+            login(true);
             log("The session cookie has expired. Please login again.");
             return;
         } catch (BaseFaradayException e) {
@@ -398,6 +440,7 @@ public class FaradayExtensionUI implements ITab {
     private void restoreSettings() {
         logout();
         extensionSettings.restore();
+        //TODO Restore text fields to default values
     }
 
     private void loadWorkspaces() {

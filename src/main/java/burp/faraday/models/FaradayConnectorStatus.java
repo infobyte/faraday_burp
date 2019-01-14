@@ -1,5 +1,5 @@
 package burp.faraday.models;
 
 public enum FaradayConnectorStatus {
-    DISCONNECTED, CONNECTED, LOGGED_IN
+    DISCONNECTED, CONNECTED, NEEDS_2FA, LOGGED_IN
 }

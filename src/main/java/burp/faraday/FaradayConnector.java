@@ -3,6 +3,12 @@ package burp.faraday;
 
 import burp.faraday.exceptions.*;
 import burp.faraday.models.*;
+import burp.faraday.models.requests.SecondFactor;
+import burp.faraday.models.requests.User;
+import burp.faraday.models.responses.CreatedObjectEntity;
+import burp.faraday.models.responses.ExistingObjectEntity;
+import burp.faraday.models.responses.ServerInfo;
+import burp.faraday.models.responses.SessionInfo;
 import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
@@ -149,14 +155,55 @@ public class FaradayConnector {
                 throw new InvalidCredentialsException();
             case 202:
                 log("2FA token is required.");
+                this.cookie = response.getCookies().get("session").getValue();
                 throw new SecondFactorRequiredException();
             case 200:
-                Map<String, NewCookie> cookies = response.getCookies();
-                this.cookie = cookies.get("session").getValue();
+                this.cookie = response.getCookies().get("session").getValue();
         }
 
     }
 
+    public void verify2FAToken(final String token) throws BaseFaradayException {
+
+        if (!this.urlIsValid) {
+            throw new InvalidFaradayException();
+        }
+
+        WebTarget target = buildTargetForMethod("confirmation");
+
+        SecondFactor secondFactor = new SecondFactor(token);
+
+        Response response;
+        try {
+            response = buildRequest(target, true).post(Entity.entity(secondFactor, MediaType.APPLICATION_JSON));
+
+        } catch (ProcessingException e) {
+            throw new InvalidFaradayException();
+        }
+
+        switch (response.getStatus()) {
+            case 401:
+            case 403:
+                log("Invalid credentials.");
+                log(response.readEntity(String.class));
+                throw new InvalidCredentialsException();
+            case 200:
+                this.cookie = response.getCookies().get("session").getValue();
+        }
+
+    }
+
+    /**
+     * @param target
+     * @param authenticated
+     * @param entity
+     *
+     * @return
+     *
+     * @throws InvalidFaradayException
+     * @throws ObjectNotCreatedException
+     * @throws ObjectAlreadyExistsException
+     */
     public Response post(final WebTarget target, final boolean authenticated, Object entity)
             throws InvalidFaradayException,
             ObjectNotCreatedException,
@@ -212,7 +259,8 @@ public class FaradayConnector {
         try {
             return buildRequest(method, authenticated).get();
         } catch (ProcessingException e) {
-            e.printStackTrace(this.stdout);
+            log(e.getMessage());
+//            e.printStackTrace(this.stdout);
             throw new FaradayConnectionException();
         }
     }
