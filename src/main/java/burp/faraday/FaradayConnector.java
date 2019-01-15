@@ -274,9 +274,13 @@ public class FaradayConnector {
             ObjectNotCreatedException,
             ObjectAlreadyExistsException {
 
+        log("POST " + target.getUri().toString());
+
         Response response;
         try {
             response = buildRequest(target, authenticated).post(Entity.entity(entity, MediaType.APPLICATION_JSON));
+            log("CODE " + response.getStatus());
+
         } catch (ProcessingException e) {
             throw new InvalidFaradayException();
         }
@@ -406,26 +410,21 @@ public class FaradayConnector {
     /**
      * @param vulnerability
      */
-    public void addVulnToWorkspace(Vulnerability vulnerability) {
-        try {
-            final int hostId = createHost(vulnerability.getHost());
+    public void addVulnToWorkspace(Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
 
-            final Service service = vulnerability.getService();
-            service.setParent(hostId);
+        final int hostId = createHost(vulnerability.getHost());
 
-            final int serviceId = createService(service);
-            vulnerability.setParent(serviceId);
+        final Service service = vulnerability.getService();
+        service.setParent(hostId);
 
-            final int vulnId = createVulnerability(vulnerability);
+        final int serviceId = createService(service);
+        vulnerability.setParent(serviceId);
 
-            log("Created vulnerability " + vulnId);
+        final int vulnId = createVulnerability(vulnerability);
 
-        } catch (InvalidFaradayException e) {
-            e.printStackTrace();
-        } catch (ObjectNotCreatedException e) {
-            log("Unable to create object tree");
-            e.printStackTrace();
-        }
+        log("Created vulnerability " + vulnId);
+
+
     }
 
     /**
@@ -486,21 +485,18 @@ public class FaradayConnector {
      * @throws ObjectNotCreatedException
      */
     private int createObject(final WebTarget target, final Object object) throws InvalidFaradayException, ObjectNotCreatedException {
-        log("POST " + target.getUri().toString());
-
         Response response;
         try {
             response = post(target, true, object);
         } catch (ObjectAlreadyExistsException e) {
             final ExistingObjectEntity existingObject = e.getExistingObjectEntity();
+
+            log("Object already exists: " + existingObject);
             return existingObject.getObject().getId();
         }
 
-        response.bufferEntity();
-        final String responseString = response.readEntity(String.class);
         final CreatedObjectEntity createdObjectEntity = response.readEntity(CreatedObjectEntity.class);
 
-        log("Response: " + responseString);
         log("Created object: " + createdObjectEntity.toString());
 
         return createdObjectEntity.getId();

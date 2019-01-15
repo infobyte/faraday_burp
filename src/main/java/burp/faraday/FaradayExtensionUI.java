@@ -12,6 +12,7 @@ import burp.ITab;
 import burp.faraday.exceptions.*;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.FaradayConnectorStatus;
+import burp.faraday.models.vulnerability.Vulnerability;
 
 import javax.swing.*;
 import java.awt.*;
@@ -487,7 +488,18 @@ public class FaradayExtensionUI implements ITab {
             issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
         }
 
-        issues.stream().map(VulnerabilityMapper::fromIssue).forEach(faradayConnector::addVulnToWorkspace);
+        try {
+            for (IScanIssue issue : issues) {
+                Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
+                faradayConnector.addVulnToWorkspace(vulnerability);
+            }
+        } catch (ObjectNotCreatedException e) {
+            log("Unable to create object tree");
+            showErrorAlert("There was an error creating the objects.");
+            e.printStackTrace(stdout);
+        } catch (InvalidFaradayException e) {
+            showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
+        }
     }
 
     @Override
@@ -516,6 +528,11 @@ public class FaradayExtensionUI implements ITab {
     private void enablePanel(Component panel) {
         Arrays.stream(((Container) panel).getComponents()).forEach(component -> component.setEnabled(true));
         panel.setEnabled(true);
+    }
+
+    public void showErrorAlert(final String message) {
+        log(message);
+        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Error", JOptionPane.ERROR_MESSAGE));
     }
 
 }
