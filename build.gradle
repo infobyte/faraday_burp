@@ -8,8 +8,9 @@ plugins {
     id 'java'
 }
 
-group 'burp'
-version '1.0-SNAPSHOT'
+group = 'burp'
+version = '2.0-SNAPSHOT'
+archivesBaseName = project.name
 
 sourceCompatibility = 1.8
 
@@ -29,7 +30,6 @@ dependencies {
 }
 
 task fatJar(type: Jar) {
-    baseName = project.name + '-all'
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
