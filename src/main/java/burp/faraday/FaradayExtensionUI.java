@@ -482,24 +482,22 @@ public class FaradayExtensionUI implements ITab {
     }
 
     private void onImportCurrentVulns(boolean onlyInScope) {
-        List<IScanIssue> issues = Arrays.asList(callbacks.getScanIssues(null));
+        runInThread(() -> {
 
-        if (onlyInScope) {
-            issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
-        }
+            List<IScanIssue> issues = Arrays.asList(callbacks.getScanIssues(null));
 
-        try {
-            for (IScanIssue issue : issues) {
-                Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
-                faradayConnector.addVulnToWorkspace(vulnerability);
+            if (onlyInScope) {
+                issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
             }
-        } catch (ObjectNotCreatedException e) {
-            log("Unable to create object tree");
-            showErrorAlert("There was an error creating the objects.");
-            e.printStackTrace(stdout);
-        } catch (InvalidFaradayException e) {
-            showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
-        }
+
+            final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
+
+            for (Vulnerability vulnerability : vulnerabilities) {
+                if (!addVulnerability(vulnerability)) {
+                    break;
+                }
+            }
+        });
     }
 
     @Override
@@ -530,9 +528,38 @@ public class FaradayExtensionUI implements ITab {
         panel.setEnabled(true);
     }
 
-    public void showErrorAlert(final String message) {
+    private void showErrorAlert(final String message) {
         log(message);
         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Error", JOptionPane.ERROR_MESSAGE));
+    }
+
+    public boolean addVulnerability(final Vulnerability vulnerability) {
+
+        try {
+            faradayConnector.addVulnToWorkspace(vulnerability);
+        } catch (ObjectNotCreatedException e) {
+            log("Unable to create object tree");
+            showErrorAlert("There was an error creating the objects.");
+            e.printStackTrace(stdout);
+            return false;
+        } catch (InvalidFaradayException e) {
+            showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
+            return false;
+        }
+
+        return true;
+    }
+
+    public void runInThread(final Runnable runnable) {
+        new SwingWorker<Void, Void>() {
+
+            @Override
+            protected Void doInBackground() {
+                runnable.run();
+
+                return null;
+            }
+        }.execute();
     }
 
 }

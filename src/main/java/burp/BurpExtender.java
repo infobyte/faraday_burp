@@ -103,11 +103,11 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             return;
         }
 
-        runInThread(() -> {
+        faradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(issues).map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
 
             for (Vulnerability vulnerability : vulnerabilities) {
-                if (!addVulnerability(vulnerability)) {
+                if (!faradayExtensionUI.addVulnerability(vulnerability)) {
                     break;
                 }
             }
@@ -119,11 +119,11 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             return;
         }
 
-        runInThread(() -> {
+        faradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(messages).map(VulnerabilityMapper::fromRequest).collect(Collectors.toList());
 
             for (Vulnerability vulnerability : vulnerabilities) {
-                if (!addVulnerability(vulnerability)) {
+                if (!faradayExtensionUI.addVulnerability(vulnerability)) {
                     break;
                 }
             }
@@ -140,36 +140,9 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             return;
         }
 
-        runInThread(() -> addVulnerability(VulnerabilityMapper.fromIssue(issue)));
+        faradayExtensionUI.runInThread(() -> faradayExtensionUI.addVulnerability(VulnerabilityMapper.fromIssue(issue)));
     }
 
-    private boolean addVulnerability(final Vulnerability vulnerability) {
 
-        try {
-            faradayConnector.addVulnToWorkspace(vulnerability);
-        } catch (ObjectNotCreatedException e) {
-            log("Unable to create object tree");
-            faradayExtensionUI.showErrorAlert("There was an error creating the objects.");
-            e.printStackTrace(stdout);
-            return false;
-        } catch (InvalidFaradayException e) {
-            faradayExtensionUI.showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
-            return false;
-        }
-
-        return true;
-    }
-
-    private void runInThread(final Runnable runnable) {
-        new SwingWorker<Void, Void>() {
-
-            @Override
-            protected Void doInBackground() {
-                runnable.run();
-
-                return null;
-            }
-        }.execute();
-    }
 }
 
