@@ -102,6 +102,14 @@ public class FaradayConnector {
         return this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName());
     }
 
+    private Version parseVersion(String version) {
+        if (version.split("\\.").length == 2) {
+            version = version + ".0";
+        }
+
+        return Version.valueOf(version);
+    }
+
     /**
      * Validates that the current baseUrl points to a valid Faraday Server.
      *
@@ -131,10 +139,10 @@ public class FaradayConnector {
 
             final String[] versionParts = serverInfo.getVersion().split("-");
 
-            serverVersion = Version.valueOf(versionParts[1]);
+            serverVersion = parseVersion(versionParts[1]);
             this.faradayEdition = FaradayEdition.fromName(versionParts[0]);
         } else {
-            serverVersion = Version.valueOf(serverInfo.getVersion());
+            serverVersion = parseVersion(serverInfo.getVersion());
             this.faradayEdition = FaradayEdition.WHITE;
         }
 
