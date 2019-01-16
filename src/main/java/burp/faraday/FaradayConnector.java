@@ -79,11 +79,11 @@ public class FaradayConnector {
     }
 
     /**
-     * Buils a target using the
+     * Buils a target using the method as the endpoint
      *
-     * @param method
+     * @param method The target of the WebTarget
      *
-     * @return
+     * @return A WebTarget to the specified method.
      */
     private WebTarget buildTargetForMethod(final String method) throws InvalidFaradayException {
         if (this.baseUrl == null) {
@@ -93,7 +93,9 @@ public class FaradayConnector {
     }
 
     /**
-     * @return
+     * Builds a WebTarget using the current workspace to build the path.
+     *
+     * @return A WebTarget using the current workspace.
      */
     private WebTarget buildTargetForCurrentWorkspace() throws InvalidFaradayException {
         if (this.baseUrl == null) {
@@ -102,6 +104,14 @@ public class FaradayConnector {
         return this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName());
     }
 
+    /**
+     * Parses a Faraday Server version and appends the '.0' if it is missing so that it can be parsed correctly.
+     * This is done to ensure compatibility with the Version parsing library.
+     *
+     * @param version The raw version of the faraday server
+     *
+     * @return The parsed version of the Faraday Server
+     */
     private Version parseVersion(String version) {
         if (version.split("\\.").length == 2) {
             version = version + ".0";
@@ -162,10 +172,12 @@ public class FaradayConnector {
     }
 
     /**
-     * @param target
-     * @param authenticated
+     * Builds a request to the specified target, adding the session cookie if authentication is required.
      *
-     * @return
+     * @param target        The WebTarget to build the request to.
+     * @param authenticated Whether the request is authenticated or not.
+     *
+     * @return The request with the specified parameters.
      */
     private Invocation.Builder buildRequest(final WebTarget target, boolean authenticated) {
         Invocation.Builder request = target
@@ -182,10 +194,12 @@ public class FaradayConnector {
     }
 
     /**
-     * @param method
-     * @param authenticated
+     * Builds a request to the specified path, adding the session cookie if authentication is required.
      *
-     * @return
+     * @param method        The relative path of the endpoint we want to issue the request to.
+     * @param authenticated Whether the request is authenticated or not.
+     *
+     * @return The request with the specified parameters.
      */
     private Invocation.Builder buildRequest(final String method, boolean authenticated) throws InvalidFaradayException {
         WebTarget target = buildTargetForMethod(method);
@@ -193,10 +207,14 @@ public class FaradayConnector {
     }
 
     /**
-     * @param username
-     * @param password
+     * Issues a log in request to the Faraday Server, and stores the cookie if successful.
      *
-     * @throws BaseFaradayException
+     * @param username The username of the account
+     * @param password The password of the account
+     *
+     * @throws InvalidFaradayException If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws InvalidCredentialsException If the credentials were invalid.
+     * @throws SecondFactorRequiredException If we need a 2FA token to login.
      */
     public void login(final String username, final String password) throws BaseFaradayException {
 
