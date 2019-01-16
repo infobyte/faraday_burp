@@ -326,10 +326,6 @@ public class FaradayExtensionUI implements ITab {
             e.printStackTrace();
             return;
 
-        } catch (BaseFaradayException e) {
-            // Unreachable
-            e.printStackTrace();
-            return;
         }
 
         extensionSettings.setUsername(username);
@@ -352,7 +348,7 @@ public class FaradayExtensionUI implements ITab {
             log("Error when validating token");
             JOptionPane.showMessageDialog(tab, "Invalid token.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
-        } catch (BaseFaradayException e) {
+        } catch (InvalidFaradayException e) {
             e.printStackTrace(stdout);
         }
 
@@ -374,7 +370,7 @@ public class FaradayExtensionUI implements ITab {
             login(true);
             log("The session cookie has expired. Please login again.");
             return;
-        } catch (BaseFaradayException e) {
+        } catch (FaradayConnectionException e) {
             log("Error acquiring session");
             log(e.toString());
             return;

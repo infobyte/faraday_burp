@@ -9,8 +9,6 @@ package burp;
 import burp.faraday.FaradayConnector;
 import burp.faraday.FaradayExtensionUI;
 import burp.faraday.VulnerabilityMapper;
-import burp.faraday.exceptions.InvalidFaradayException;
-import burp.faraday.exceptions.ObjectNotCreatedException;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.vulnerability.Vulnerability;
 

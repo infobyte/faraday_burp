@@ -67,7 +67,7 @@ public class FaradayConnector {
      *
      * @param baseUrl Base URL of the Faraday Server.
      */
-    public void setBaseUrl(final String baseUrl) {
+    void setBaseUrl(final String baseUrl) {
 
         if (baseUrl == null) {
             this.baseUrl = null;
@@ -126,7 +126,7 @@ public class FaradayConnector {
      * @throws InvalidFaradayException When the URL does not point to a valid Faraday Server.
      * @throws ServerTooOldException   When the server is running a version lower than 3.4.0
      */
-    public void validateFaradayURL() throws InvalidFaradayException, ServerTooOldException {
+    void validateFaradayURL() throws InvalidFaradayException, ServerTooOldException {
 
         WebTarget infoEndpoint = buildTargetForMethod("v2/info");
 
@@ -212,11 +212,14 @@ public class FaradayConnector {
      * @param username The username of the account
      * @param password The password of the account
      *
-     * @throws InvalidFaradayException If the Faraday Server URL is not valid, or an error occurred while sending the request.
-     * @throws InvalidCredentialsException If the credentials were invalid.
+     * @throws InvalidFaradayException       If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws InvalidCredentialsException   If the credentials were invalid.
      * @throws SecondFactorRequiredException If we need a 2FA token to login.
      */
-    public void login(final String username, final String password) throws BaseFaradayException {
+    void login(final String username, final String password)
+            throws InvalidFaradayException,
+            InvalidCredentialsException,
+            SecondFactorRequiredException {
 
         if (!this.urlIsValid) {
             throw new InvalidFaradayException();
@@ -247,7 +250,15 @@ public class FaradayConnector {
 
     }
 
-    public void verify2FAToken(final String token) throws BaseFaradayException {
+    /**
+     * Issues a request to verify the 2FA token. If the verification is successful, the stored session cookie is updated.
+     *
+     * @param token The token to verify.
+     *
+     * @throws InvalidFaradayException     If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws InvalidCredentialsException If the token could not be verified.
+     */
+    void verify2FAToken(final String token) throws InvalidFaradayException, InvalidCredentialsException {
 
         if (!this.urlIsValid) {
             throw new InvalidFaradayException();
@@ -277,17 +288,19 @@ public class FaradayConnector {
     }
 
     /**
-     * @param target
-     * @param authenticated
-     * @param entity
+     * Issues a POST request to the server.
      *
-     * @return
+     * @param target        The target to issue the request to.
+     * @param authenticated Whether or not the request is authenticated.
+     * @param entity        The entity to POST
      *
-     * @throws InvalidFaradayException
-     * @throws ObjectNotCreatedException
-     * @throws ObjectAlreadyExistsException
+     * @return The response object
+     *
+     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws ObjectNotCreatedException    If there was an error creating the object.
+     * @throws ObjectAlreadyExistsException If the object we are trying to create already exists.
      */
-    public Response post(final WebTarget target, final boolean authenticated, Object entity)
+    private Response post(final WebTarget target, final boolean authenticated, Object entity)
             throws InvalidFaradayException,
             ObjectNotCreatedException,
             ObjectAlreadyExistsException {
@@ -318,9 +331,12 @@ public class FaradayConnector {
     }
 
     /**
-     * @throws BaseFaradayException
+     * Issues a request to fetch the latest session data from the server. Should be used to renew the cookie.
+     *
+     * @throws CookieExpiredException     If the cookie has already expired
+     * @throws FaradayConnectionException if there was an error connecting to the Faraday Server
      */
-    public void getSession() throws BaseFaradayException {
+    void getSession() throws CookieExpiredException, FaradayConnectionException {
 
         log("Fetching session info");
 
@@ -346,12 +362,14 @@ public class FaradayConnector {
     }
 
     /**
-     * @param method
-     * @param authenticated
+     * Issues a GET request to the server.
      *
-     * @return
+     * @param method        The endpoint to send the request to.
+     * @param authenticated Whether or not the request is authenticated.
      *
-     * @throws FaradayConnectionException
+     * @return The response object.
+     *
+     * @throws FaradayConnectionException if there was an error connecting to the Faraday Server
      */
     private Response get(final String method, final boolean authenticated) throws FaradayConnectionException {
         try {
@@ -364,11 +382,13 @@ public class FaradayConnector {
     }
 
     /**
-     * @return
+     * Fetches a list of workspaces from the server.
      *
-     * @throws BaseFaradayException
+     * @return A list of workspaces this user has access to.
+     *
+     * @throws InvalidFaradayException If the Faraday Server URL is not valid, or an error occurred while sending the request.
      */
-    public List<Workspace> getWorkspaces() throws BaseFaradayException {
+    List<Workspace> getWorkspaces() throws InvalidFaradayException, FaradayConnectionException {
         if (!this.urlIsValid) {
             throw new InvalidFaradayException();
         }
@@ -383,11 +403,13 @@ public class FaradayConnector {
     }
 
     /**
-     * @param method
+     * Issues an unauthenticated GET request
      *
-     * @return
+     * @param method The method to send the request to.
      *
-     * @throws FaradayConnectionException
+     * @return The response object.
+     *
+     * @throws FaradayConnectionException if there was an error connecting to the Faraday Server
      */
     private Response get(final String method) throws FaradayConnectionException {
         return get(method, false);
@@ -409,11 +431,11 @@ public class FaradayConnector {
         this.stdout.println("[CONNECTOR] " + msg);
     }
 
-    public String getCookie() {
+    String getCookie() {
         return cookie;
     }
 
-    public void setCookie(String cookie) {
+    void setCookie(String cookie) {
         this.cookie = cookie;
     }
 
@@ -421,14 +443,16 @@ public class FaradayConnector {
         return currentWorkspace;
     }
 
-    public void setCurrentWorkspace(Workspace currentWorkspace) {
+    void setCurrentWorkspace(Workspace currentWorkspace) {
         this.currentWorkspace = currentWorkspace;
     }
 
     /**
-     * @param vulnerability
+     * Adds a vulnerability to the current workspace.
+     *
+     * @param vulnerability The vulnerability to create.
      */
-    public void addVulnToWorkspace(Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
+    void addVulnToWorkspace(Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
 
         final int hostId = createHost(vulnerability.getHost());
 
@@ -446,12 +470,14 @@ public class FaradayConnector {
     }
 
     /**
-     * @param host
+     * Adds a host to the current workspace.
      *
-     * @return
+     * @param host The host to create.
      *
-     * @throws InvalidFaradayException
-     * @throws ObjectNotCreatedException
+     * @return The ID of the created host, or the existing one.
+     *
+     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws ObjectNotCreatedException If the object could not be created.
      */
     private int createHost(final Host host) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating host: " + host.toString());
@@ -462,12 +488,14 @@ public class FaradayConnector {
     }
 
     /**
-     * @param service
+     * Adds a Service to the current workspace.
      *
-     * @return
+     * @param service The service to create.
      *
-     * @throws InvalidFaradayException
-     * @throws ObjectNotCreatedException
+     * @return The ID of the created service, or the existing one.
+     *
+     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws ObjectNotCreatedException If the object could not be created.
      */
     private int createService(final Service service) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating service: " + service.toString());
@@ -478,12 +506,14 @@ public class FaradayConnector {
     }
 
     /**
-     * @param vulnerability
+     * Adds a vulnerability to the current workspace.
      *
-     * @return
+     * @param vulnerability The vulnerability to create.
      *
-     * @throws InvalidFaradayException
-     * @throws ObjectNotCreatedException
+     * @return The ID of the created vulnerability, or the existing one.
+     *
+     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws ObjectNotCreatedException If the object could not be created.
      */
     private int createVulnerability(final Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
         log("Creating vulnerability: " + vulnerability.toString());
@@ -494,13 +524,15 @@ public class FaradayConnector {
     }
 
     /**
-     * @param target
-     * @param object
+     * Adds an object to the current workspace.
      *
-     * @return
+     * @param target The target to which to send the object.
+     * @param object The object to create.
      *
-     * @throws InvalidFaradayException
-     * @throws ObjectNotCreatedException
+     * @return The ID of the created object, or the existing one.
+     *
+     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws ObjectNotCreatedException If the object could not be created.
      */
     private int createObject(final WebTarget target, final Object object) throws InvalidFaradayException, ObjectNotCreatedException {
         Response response;
