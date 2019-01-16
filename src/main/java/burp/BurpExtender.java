@@ -9,6 +9,10 @@ package burp;
 import burp.faraday.FaradayConnector;
 import burp.faraday.FaradayExtensionUI;
 import burp.faraday.VulnerabilityMapper;
+import burp.faraday.exceptions.InvalidCredentialsException;
+import burp.faraday.exceptions.InvalidFaradayServerException;
+import burp.faraday.exceptions.SecondFactorRequiredException;
+import burp.faraday.exceptions.ServerTooOldException;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.vulnerability.Vulnerability;
 
@@ -49,6 +53,38 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         this.faradayConnector = new FaradayConnector(stdout);
         this.extensionSettings = new ExtensionSettings(callbacks);
         this.faradayExtensionUI = new FaradayExtensionUI(stdout, callbacks, faradayConnector, extensionSettings);
+
+        if (!extensionSettings.getUsername().isEmpty() && !extensionSettings.getPassword().isEmpty()) {
+            log("Settings found");
+            log("Faraday Server URL: " + extensionSettings.getFaradayURL());
+            log("Username: " + extensionSettings.getUsername());
+            log("Import new Vulns: " + extensionSettings.importNewVulns());
+
+            faradayConnector.setBaseUrl(extensionSettings.getFaradayURL());
+            try {
+                faradayConnector.validateFaradayURL();
+            } catch (InvalidFaradayServerException e) {
+                faradayExtensionUI.showErrorAlert("Faraday Server is down.");
+                return;
+            } catch (ServerTooOldException e) {
+                faradayExtensionUI.showErrorAlert("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
+                return;
+            }
+
+            try {
+                faradayConnector.login(extensionSettings.getUsername(), extensionSettings.getPassword());
+            } catch (SecondFactorRequiredException e) {
+                faradayExtensionUI.showErrorAlert("The 2FA token for Faraday is required");
+                return;
+            } catch (InvalidCredentialsException e) {
+                faradayExtensionUI.showErrorAlert("Invalid credentials.");
+                return;
+            } catch (InvalidFaradayServerException e) {
+                faradayExtensionUI.showErrorAlert("Faraday Server is down.");
+                return;
+            }
+            faradayExtensionUI.notifyLoggedIn(false);
+        }
 
         callbacks.addSuiteTab(faradayExtensionUI);
 
@@ -101,7 +137,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             return;
         }
 
-        faradayExtensionUI.runInThread(() -> {
+        FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(issues).map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
 
             for (Vulnerability vulnerability : vulnerabilities) {
@@ -117,7 +153,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             return;
         }
 
-        faradayExtensionUI.runInThread(() -> {
+        FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(messages).map(VulnerabilityMapper::fromRequest).collect(Collectors.toList());
 
             for (Vulnerability vulnerability : vulnerabilities) {
@@ -138,7 +174,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             return;
         }
 
-        faradayExtensionUI.runInThread(() -> faradayExtensionUI.addVulnerability(VulnerabilityMapper.fromIssue(issue)));
+        FaradayExtensionUI.runInThread(() -> faradayExtensionUI.addVulnerability(VulnerabilityMapper.fromIssue(issue)));
     }
 
 

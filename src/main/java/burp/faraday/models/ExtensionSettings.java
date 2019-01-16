@@ -12,13 +12,12 @@ public class ExtensionSettings {
 
     private final IBurpExtenderCallbacks callbacks;
 
-    private static final String DEFAULT_FARADAY_URL = "http://localhost:5985";
+    private static final String DEFAULT_FARADAY_URL = "http://127.0.0.1:5985";
     private static final String DEFAULT_IMPORT_NEW_VULNS = "0";
 
     private static final String KEY_FARADAY_URL = "faraday_url";
     private static final String KEY_USERNAME = "faraday_username";
     private static final String KEY_PASSWORD = "faraday_password";
-    private static final String KEY_COOKIE = "faraday_cookie";
     private static final String KEY_CURRENT_WORKSPACE = "faraday_current_workspace";
     private static final String KEY_IMPORT_NEW_VULNS = "faraday_import_new";
 
@@ -60,17 +59,6 @@ public class ExtensionSettings {
         callbacks.saveExtensionSetting(KEY_PASSWORD, password);
     }
 
-    public String getCookie() {
-        return getSetting(KEY_COOKIE);
-    }
-
-    public void setCookie(String cookie) {
-        if (cookie != null) {
-            cookie = cookie.trim();
-        }
-        callbacks.saveExtensionSetting(KEY_COOKIE, cookie);
-    }
-
     public String getCurrentWorkspace() {
         return getSetting(KEY_CURRENT_WORKSPACE);
     }
@@ -95,7 +83,6 @@ public class ExtensionSettings {
         callbacks.saveExtensionSetting(KEY_FARADAY_URL, DEFAULT_FARADAY_URL);
         callbacks.saveExtensionSetting(KEY_USERNAME, "");
         callbacks.saveExtensionSetting(KEY_PASSWORD, "");
-        callbacks.saveExtensionSetting(KEY_COOKIE, "");
         callbacks.saveExtensionSetting(KEY_CURRENT_WORKSPACE, "");
         callbacks.saveExtensionSetting(KEY_IMPORT_NEW_VULNS, "0");
     }
@@ -118,10 +105,6 @@ public class ExtensionSettings {
         }
 
         return value;
-    }
-
-    public void resetCookie() {
-        setCookie("");
     }
 
     public String getDefaultFaradayUrl() {

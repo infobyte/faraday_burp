@@ -6,20 +6,17 @@
 
 package burp.faraday.models.responses;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class ExistingObjectEntity {
-    private ExistingObject object;
+    private CreatedObjectEntity object;
 
     public ExistingObjectEntity() {
     }
 
-    public ExistingObject getObject() {
+    public CreatedObjectEntity getObject() {
         return object;
     }
 
-    public void setObject(ExistingObject object) {
+    public void setObject(CreatedObjectEntity object) {
         this.object = object;
     }
 

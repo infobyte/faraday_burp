@@ -81,26 +81,6 @@ public class FaradayExtensionUI implements ITab {
 
         disablePanel(settingsPannel);
 
-        if (!extensionSettings.getCookie().isEmpty()) {
-            log("Settings found:");
-            log("Faraday Server URL: " + extensionSettings.getFaradayURL());
-            log("Username: " + extensionSettings.getUsername());
-            log("Cookie: " + extensionSettings.getCookie());
-            log("Import new Vulns: " + extensionSettings.importNewVulns());
-
-            faradayConnector.setBaseUrl(extensionSettings.getFaradayURL());
-            faradayConnector.setCookie(extensionSettings.getCookie());
-            try {
-                faradayConnector.validateFaradayURL();
-            } catch (InvalidFaradayException e) {
-                JOptionPane.showMessageDialog(tab, "Faraday Server is down.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            } catch (ServerTooOldException e) {
-                JOptionPane.showMessageDialog(tab, "Faraday server is too old to be used with this extension. Please upgrade to the latest version.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            getSession(false);
-        }
     }
 
     private Component setupLoginPanel() {
@@ -285,14 +265,14 @@ public class FaradayExtensionUI implements ITab {
         String username = usernameText.getText().trim();
 
         if (username.isEmpty()) {
-            JOptionPane.showMessageDialog(tab, "Username is empty.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Username is empty.");
             return;
         }
 
         String password = new String(passwordField.getPassword()).trim();
 
         if (password.isEmpty()) {
-            JOptionPane.showMessageDialog(tab, "Password is empty.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Password is empty.");
             return;
         }
 
@@ -300,7 +280,7 @@ public class FaradayExtensionUI implements ITab {
             faradayConnector.login(username, password);
         } catch (InvalidCredentialsException e) {
 
-            JOptionPane.showMessageDialog(tab, "Invalid credentials.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Invalid credentials.");
             passwordField.setText("");
             setStatus("Invalid credentials");
             return;
@@ -320,25 +300,23 @@ public class FaradayExtensionUI implements ITab {
             this.status = FaradayConnectorStatus.NEEDS_2FA;
             return;
 
-        } catch (InvalidFaradayException e) {
+        } catch (InvalidFaradayServerException e) {
 
-            JOptionPane.showMessageDialog(tab, "Invalid Faraday server URL.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Invalid Faraday server URL.");
             e.printStackTrace();
             return;
 
         }
 
         extensionSettings.setUsername(username);
-        JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
-
-        getSession(isSecondAttempt);
+        notifyLoggedIn(true);
     }
 
     private void verifyToken() {
         String token = secondFactorField.getText().trim();
 
         if (token.isEmpty()) {
-            JOptionPane.showMessageDialog(tab, "Token is empty.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Token is empty.");
             return;
         }
 
@@ -346,57 +324,21 @@ public class FaradayExtensionUI implements ITab {
             faradayConnector.verify2FAToken(token);
         } catch (InvalidCredentialsException e) {
             log("Error when validating token");
-            JOptionPane.showMessageDialog(tab, "Invalid token.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Invalid token.");
             return;
-        } catch (InvalidFaradayException e) {
+        } catch (InvalidFaradayServerException e) {
             e.printStackTrace(stdout);
         }
 
-        JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
+        notifyLoggedIn(true);
         secondFactorField.setEditable(false);
-        getSession(false);
-    }
-
-    private void getSession(boolean isSecondAttempt) {
-
-        try {
-            faradayConnector.getSession();
-        } catch (CookieExpiredException e) {
-//            extensionSettings.resetCookie();
-            if (isSecondAttempt) {
-                log("Unable to renew the cookie.");
-                return;
-            }
-            login(true);
-            log("The session cookie has expired. Please login again.");
-            return;
-        } catch (FaradayConnectionException e) {
-            log("Error acquiring session");
-            log(e.toString());
-            return;
-        }
-
-        faradayUrlText.setEditable(false);
-        usernameText.setEditable(false);
-        passwordField.setEditable(false);
-
-        statusButton.setText("Logout");
-        setStatus("Logged in");
-        this.status = FaradayConnectorStatus.LOGGED_IN;
-        loadWorkspaces();
-        enablePanel(settingsPannel);
-
-        extensionSettings.setUsername(usernameText.getText());
-        extensionSettings.setPassword(new String(passwordField.getPassword()).trim());
-        extensionSettings.setFaradayURL(faradayUrlText.getText());
-        extensionSettings.setCookie(faradayConnector.getCookie());
     }
 
     private void connect() {
         String faradayUrl = faradayUrlText.getText().trim();
 
         if (faradayUrl.isEmpty()) {
-            JOptionPane.showMessageDialog(tab, "Faraday URL is empty.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Faraday URL is empty.");
             return;
         }
 
@@ -404,11 +346,11 @@ public class FaradayExtensionUI implements ITab {
 
         try {
             faradayConnector.validateFaradayURL();
-        } catch (InvalidFaradayException e) {
-            JOptionPane.showMessageDialog(tab, "Faraday URL is not a valid Faraday server.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (InvalidFaradayServerException e) {
+            showErrorAlert("Faraday URL is not a valid Faraday server.");
             return;
         } catch (ServerTooOldException e) {
-            JOptionPane.showMessageDialog(tab, "Faraday server is too old to be used with this extension. Please upgrade to the latest version.", "Error", JOptionPane.ERROR_MESSAGE);
+            showErrorAlert("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
             return;
         }
 
@@ -426,6 +368,7 @@ public class FaradayExtensionUI implements ITab {
         usernameText.setEditable(true);
         passwordField.setEditable(true);
         passwordField.setText("");
+        extensionSettings.setPassword("");
 
         secondFactorField.setEnabled(false);
         secondFactorField.setText("");
@@ -436,14 +379,37 @@ public class FaradayExtensionUI implements ITab {
         this.status = FaradayConnectorStatus.DISCONNECTED;
 
         faradayConnector.logout();
-        extensionSettings.resetCookie();
+        FaradayConnector.clearCookies();
+
+
         workspaceCombo.removeAllItems();
         disablePanel(settingsPannel);
+    }
+
+    public void notifyLoggedIn(final boolean showAlert) {
+        if (showAlert) {
+            JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
+        }
+
+        faradayUrlText.setEditable(false);
+        usernameText.setEditable(false);
+        passwordField.setEditable(false);
+
+        statusButton.setText("Logout");
+        setStatus("Logged in");
+        this.status = FaradayConnectorStatus.LOGGED_IN;
+        loadWorkspaces();
+        enablePanel(settingsPannel);
+
+        extensionSettings.setUsername(usernameText.getText());
+        extensionSettings.setPassword(new String(passwordField.getPassword()).trim());
+        extensionSettings.setFaradayURL(faradayUrlText.getText());
     }
 
     private void restoreSettings() {
         logout();
         extensionSettings.restore();
+        FaradayConnector.clearCookies();
         faradayUrlText.setText(extensionSettings.getDefaultFaradayUrl());
     }
 
@@ -464,7 +430,7 @@ public class FaradayExtensionUI implements ITab {
             }
 
 
-        } catch (BaseFaradayException e) {
+        } catch (CookieExpiredException | InvalidFaradayServerException e) {
             log("Could not fetch workspaces: " + e);
         }
     }
@@ -524,7 +490,7 @@ public class FaradayExtensionUI implements ITab {
         panel.setEnabled(true);
     }
 
-    private void showErrorAlert(final String message) {
+    public void showErrorAlert(final String message) {
         log(message);
         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Error", JOptionPane.ERROR_MESSAGE));
     }
@@ -538,7 +504,7 @@ public class FaradayExtensionUI implements ITab {
             showErrorAlert("There was an error creating the objects.");
             e.printStackTrace(stdout);
             return false;
-        } catch (InvalidFaradayException e) {
+        } catch (InvalidFaradayServerException e) {
             showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
             return false;
         }
@@ -546,7 +512,7 @@ public class FaradayExtensionUI implements ITab {
         return true;
     }
 
-    public void runInThread(final Runnable runnable) {
+    public static void runInThread(final Runnable runnable) {
         new SwingWorker<Void, Void>() {
 
             @Override

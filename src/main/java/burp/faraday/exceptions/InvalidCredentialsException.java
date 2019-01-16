@@ -6,5 +6,5 @@
 
 package burp.faraday.exceptions;
 
-public class InvalidCredentialsException extends BaseFaradayException {
+public class InvalidCredentialsException extends Exception {
 }

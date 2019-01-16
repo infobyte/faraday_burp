@@ -4,7 +4,10 @@
  * See the file 'LICENSE' for the license information
  */
 
-package burp.faraday.exceptions;
+package burp.faraday.exceptions.http;
 
-public class FaradayConnectionException extends BaseFaradayException {
+public class UnauthorizedException extends HTTPException {
+    public UnauthorizedException() {
+        super(401);
+    }
 }

@@ -6,14 +6,14 @@
 
 package burp.faraday.models.responses;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.SerializedName;
 
 public class ServerInfo {
 
-    @JsonProperty("Faraday Server")
+    @SerializedName("Faraday Server")
     private String status;
 
-    @JsonProperty("Version")
+    @SerializedName("Version")
     private String version;
 
     public ServerInfo() {

@@ -6,5 +6,5 @@
 
 package burp.faraday.exceptions;
 
-public class ObjectNotCreatedException extends BaseFaradayException {
+public class ObjectNotCreatedException extends Exception {
 }

@@ -6,15 +6,13 @@
 
 package burp.faraday.models.responses;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.SerializedName;
 
 import java.util.Arrays;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class SessionInfo {
 
-    @JsonProperty("csrf_token")
+    @SerializedName("csrf_token")
     private String csrfToken;
 
     private String email;
@@ -24,7 +22,7 @@ public class SessionInfo {
 
     private String[] roles;
 
-    @JsonProperty("state_opt")
+    @SerializedName("state_opt")
     private int stateOTP;
 
     public SessionInfo() {

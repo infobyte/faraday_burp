@@ -6,5 +6,5 @@
 
 package burp.faraday.exceptions;
 
-public class CookieExpiredException extends BaseFaradayException {
+public class CookieExpiredException extends Exception {
 }

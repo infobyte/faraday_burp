@@ -8,28 +8,31 @@ package burp.faraday;
 
 
 import burp.faraday.exceptions.*;
-import burp.faraday.models.*;
+import burp.faraday.exceptions.http.ConflictException;
+import burp.faraday.exceptions.http.UnauthorizedException;
+import burp.faraday.models.FaradayEdition;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
-import burp.faraday.models.responses.CreatedObjectEntity;
-import burp.faraday.models.responses.ExistingObjectEntity;
-import burp.faraday.models.responses.ServerInfo;
-import burp.faraday.models.responses.SessionInfo;
-import burp.faraday.models.vulnerability.Host;
+import burp.faraday.models.responses.*;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
 import com.github.zafarkhaja.semver.Version;
-import org.glassfish.jersey.jackson.internal.jackson.jaxrs.json.JacksonJsonProvider;
+import feign.*;
+import feign.codec.Decoder;
+import feign.codec.ErrorDecoder;
+import feign.gson.GsonDecoder;
+import feign.gson.GsonEncoder;
 
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.*;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.NewCookie;
-import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
+import java.net.CookieManager;
+import java.net.HttpCookie;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * This class provides the utilities necessary to connect to a Faraday Server and issue
@@ -40,26 +43,23 @@ public class FaradayConnector {
     /**
      * Minimum version required to use the extension.
      */
-    private static final Version MINIMUM_VERSION = Version.valueOf("3.4.0");
+    private static final Version MINIMUM_VERSION = Version.valueOf("3.5.0");
 
     private final PrintWriter stdout;
-    private WebTarget baseUrl;
+    private FaradayServerAPI faradayServerAPI;
 
+    private String baseUrl = null;
     private boolean urlIsValid = false;
 
-    private Client client;
-
-    private String cookie = null;
     private SessionInfo sessionInfo = null;
 
     private Workspace currentWorkspace = null;
     private FaradayEdition faradayEdition;
 
+    private static final CookieManager COOKIE_MANAGER = new CookieManager();
+
     public FaradayConnector(PrintWriter stdout) {
         this.stdout = stdout;
-
-        client = ClientBuilder.newClient()
-                .register(JacksonJsonProvider.class);
     }
 
     /**
@@ -67,41 +67,51 @@ public class FaradayConnector {
      *
      * @param baseUrl Base URL of the Faraday Server.
      */
-    void setBaseUrl(final String baseUrl) {
+    public void setBaseUrl(final String baseUrl) {
 
-        if (baseUrl == null) {
-            this.baseUrl = null;
-        } else {
-            this.baseUrl = client.target(baseUrl);
-        }
+        Decoder decoder = new GsonDecoder();
 
+        faradayServerAPI = Feign.builder()
+                .logLevel(Logger.Level.FULL)
+                .requestInterceptor(this::addCookies)
+                .encoder(new GsonEncoder())
+                .errorDecoder(new FaradayErrorDecoder(decoder))
+                .mapAndDecode((response, type) -> {
+                    handleCookies(response.headers());
+                    return response;
+                }, decoder)
+                .target(FaradayServerAPI.class, baseUrl);
+
+        this.baseUrl = baseUrl;
         this.urlIsValid = false;
     }
 
-    /**
-     * Buils a target using the method as the endpoint
-     *
-     * @param method The target of the WebTarget
-     *
-     * @return A WebTarget to the specified method.
-     */
-    private WebTarget buildTargetForMethod(final String method) throws InvalidFaradayException {
-        if (this.baseUrl == null) {
-            throw new InvalidFaradayException();
-        }
-        return this.baseUrl.path("_api").path(method);
+    private void addCookies(RequestTemplate template) {
+        URI uri = URI.create(this.baseUrl);
+        COOKIE_MANAGER.getCookieStore().get(uri).stream()
+                .map(HttpCookie::toString)
+                .forEach(cookie -> template.header("Cookie", cookie));
     }
 
-    /**
-     * Builds a WebTarget using the current workspace to build the path.
-     *
-     * @return A WebTarget using the current workspace.
-     */
-    private WebTarget buildTargetForCurrentWorkspace() throws InvalidFaradayException {
-        if (this.baseUrl == null) {
-            throw new InvalidFaradayException();
+    private void handleCookies(Map<String, Collection<String>> headers) {
+        // From Map<String, Collection<String>> to Map<String, List<String>>
+        Map<String, List<String>> h = headers.entrySet().stream()
+                .collect(
+                        Collectors.toMap(
+                                Map.Entry::getKey,
+                                entry -> new ArrayList<>(entry.getValue()))
+                );
+        try {
+            URI uri = URI.create(this.baseUrl);
+            COOKIE_MANAGER.put(uri, h);
+            String sessionCookie = COOKIE_MANAGER.getCookieStore().get(uri).stream() // Stream<HttpCookie>
+                    .filter(cookie -> cookie.getName().equals("session"))
+                    .findFirst() // Optional<HttpCookie>
+                    .map(HttpCookie::getValue)
+                    .orElse("");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        return this.baseUrl.path("_api").path("v2").path("ws").path(currentWorkspace.getName());
     }
 
     /**
@@ -123,25 +133,16 @@ public class FaradayConnector {
     /**
      * Validates that the current baseUrl points to a valid Faraday Server.
      *
-     * @throws InvalidFaradayException When the URL does not point to a valid Faraday Server.
-     * @throws ServerTooOldException   When the server is running a version lower than 3.4.0
+     * @throws InvalidFaradayServerException When the URL does not point to a valid Faraday Server.
+     * @throws ServerTooOldException         When the server is running a version lower than 3.4.0
      */
-    void validateFaradayURL() throws InvalidFaradayException, ServerTooOldException {
-
-        WebTarget infoEndpoint = buildTargetForMethod("v2/info");
-
-        log("Testing for running Faraday server at: " + infoEndpoint.getUri());
-
-        Response response;
+    public void validateFaradayURL() throws ServerTooOldException, InvalidFaradayServerException {
+        ServerInfo serverInfo;
         try {
-            response = get("v2/info");
-        } catch (FaradayConnectionException e) {
-            throw new InvalidFaradayException();
+            serverInfo = faradayServerAPI.getInfo();
+        } catch (FeignException e) {
+            throw new InvalidFaradayServerException();
         }
-
-        ServerInfo serverInfo = response.readEntity(ServerInfo.class);
-
-        log(serverInfo.toString());
 
         final Version serverVersion;
 
@@ -163,47 +164,8 @@ public class FaradayConnector {
             throw new ServerTooOldException();
         }
 
-        this.urlIsValid = response.getStatus() == 200;
-
-        if (this.urlIsValid) {
-            log("Faraday server found!");
-        }
-
-    }
-
-    /**
-     * Builds a request to the specified target, adding the session cookie if authentication is required.
-     *
-     * @param target        The WebTarget to build the request to.
-     * @param authenticated Whether the request is authenticated or not.
-     *
-     * @return The request with the specified parameters.
-     */
-    private Invocation.Builder buildRequest(final WebTarget target, boolean authenticated) {
-        Invocation.Builder request = target
-                .request(MediaType.APPLICATION_JSON);
-
-        if (authenticated) {
-            if (this.cookie == null) {
-                throw new IllegalStateException("Attempt to perform an authenticated request without a cookie.");
-            }
-            request = request.cookie("session", this.cookie);
-        }
-
-        return request;
-    }
-
-    /**
-     * Builds a request to the specified path, adding the session cookie if authentication is required.
-     *
-     * @param method        The relative path of the endpoint we want to issue the request to.
-     * @param authenticated Whether the request is authenticated or not.
-     *
-     * @return The request with the specified parameters.
-     */
-    private Invocation.Builder buildRequest(final String method, boolean authenticated) throws InvalidFaradayException {
-        WebTarget target = buildTargetForMethod(method);
-        return buildRequest(target, authenticated);
+        this.urlIsValid = true;
+        log("Faraday server found!");
     }
 
     /**
@@ -212,173 +174,92 @@ public class FaradayConnector {
      * @param username The username of the account
      * @param password The password of the account
      *
-     * @throws InvalidFaradayException       If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws InvalidFaradayServerException If the Faraday Server URL is not valid, or an error occurred while sending the request.
      * @throws InvalidCredentialsException   If the credentials were invalid.
      * @throws SecondFactorRequiredException If we need a 2FA token to login.
      */
-    void login(final String username, final String password)
-            throws InvalidFaradayException,
+    public void login(final String username, final String password)
+            throws InvalidFaradayServerException,
             InvalidCredentialsException,
             SecondFactorRequiredException {
 
         if (!this.urlIsValid) {
-            throw new InvalidFaradayException();
+            throw new InvalidFaradayServerException();
         }
 
-        User user = new User(username, password);
+        FaradayConnector.clearCookies();
 
-        Response response;
+        final User user = new User(username, password);
+
+        LoginStatus loginStatus;
         try {
-            response = buildTargetForMethod("login")
-                    .request(MediaType.APPLICATION_JSON)
-                    .post(Entity.entity(user, MediaType.APPLICATION_JSON));
-        } catch (ProcessingException e) {
-            throw new InvalidFaradayException();
+            loginStatus = faradayServerAPI.login(user);
+        } catch (UnauthorizedException e) {
+            log("Invalid credentials.");
+            throw new InvalidCredentialsException();
         }
 
-        switch (response.getStatus()) {
-            case 401:
-                log("Invalid credentials.");
-                throw new InvalidCredentialsException();
-            case 202:
-                log("2FA token is required.");
-                this.cookie = response.getCookies().get("session").getValue();
-                throw new SecondFactorRequiredException();
-            case 200:
-                this.cookie = response.getCookies().get("session").getValue();
+        if (loginStatus.getCode() == 202) {
+            log("2FA token is required.");
+            throw new SecondFactorRequiredException();
         }
 
+        assert loginStatus.getCode() == 200;
+
+        try {
+            this.getSession();
+        } catch (CookieExpiredException ignored) {
+        }
     }
+
 
     /**
      * Issues a request to verify the 2FA token. If the verification is successful, the stored session cookie is updated.
      *
      * @param token The token to verify.
      *
-     * @throws InvalidFaradayException     If the Faraday Server URL is not valid, or an error occurred while sending the request.
-     * @throws InvalidCredentialsException If the token could not be verified.
+     * @throws InvalidFaradayServerException If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws InvalidCredentialsException   If the token could not be verified.
      */
-    void verify2FAToken(final String token) throws InvalidFaradayException, InvalidCredentialsException {
+    void verify2FAToken(final String token) throws InvalidFaradayServerException, InvalidCredentialsException {
 
         if (!this.urlIsValid) {
-            throw new InvalidFaradayException();
+            throw new InvalidFaradayServerException();
         }
 
-        WebTarget target = buildTargetForMethod("confirmation");
-
-        SecondFactor secondFactor = new SecondFactor(token);
-
-        Response response;
+        LoginStatus loginStatus;
         try {
-            response = buildRequest(target, true).post(Entity.entity(secondFactor, MediaType.APPLICATION_JSON));
-
-        } catch (ProcessingException e) {
-            throw new InvalidFaradayException();
+            loginStatus = faradayServerAPI.verifyToken(new SecondFactor(token));
+        } catch (UnauthorizedException e) {
+            log("Invalid credentials.");
+            throw new InvalidCredentialsException();
         }
 
-        switch (response.getStatus()) {
-            case 401:
-            case 403:
-                log("Invalid credentials.");
-                throw new InvalidCredentialsException();
-            case 200:
-                this.cookie = response.getCookies().get("session").getValue();
-        }
+        assert loginStatus.getCode() == 200;
 
-    }
-
-    /**
-     * Issues a POST request to the server.
-     *
-     * @param target        The target to issue the request to.
-     * @param authenticated Whether or not the request is authenticated.
-     * @param entity        The entity to POST
-     *
-     * @return The response object
-     *
-     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
-     * @throws ObjectNotCreatedException    If there was an error creating the object.
-     * @throws ObjectAlreadyExistsException If the object we are trying to create already exists.
-     */
-    private Response post(final WebTarget target, final boolean authenticated, Object entity)
-            throws InvalidFaradayException,
-            ObjectNotCreatedException,
-            ObjectAlreadyExistsException {
-
-        log("POST " + target.getUri().toString());
-
-        Response response;
         try {
-            response = buildRequest(target, authenticated).post(Entity.entity(entity, MediaType.APPLICATION_JSON));
-            log("CODE " + response.getStatus());
-
-        } catch (ProcessingException e) {
-            throw new InvalidFaradayException();
+            this.getSession();
+        } catch (CookieExpiredException ignored) {
         }
-
-        if (response.getStatus() == Response.Status.CREATED.getStatusCode()) {
-            return response;
-        }
-
-        if (response.getStatus() == Response.Status.CONFLICT.getStatusCode()) {
-            throw new ObjectAlreadyExistsException(response.readEntity(ExistingObjectEntity.class));
-        }
-
-        log("code:" + response.getStatus());
-        log("body: " + response.readEntity(String.class));
-
-        throw new ObjectNotCreatedException();
     }
 
     /**
      * Issues a request to fetch the latest session data from the server. Should be used to renew the cookie.
      *
-     * @throws CookieExpiredException     If the cookie has already expired
-     * @throws FaradayConnectionException if there was an error connecting to the Faraday Server
+     * @throws CookieExpiredException If the cookie has already expired
      */
-    void getSession() throws CookieExpiredException, FaradayConnectionException {
+    void getSession() throws CookieExpiredException {
 
         log("Fetching session info");
 
-        Response response = get("session", true);
-
-        if (response.getStatus() == Response.Status.UNAUTHORIZED.getStatusCode()) {
-            log("Cookie expired.");
-            this.cookie = "";
+        try {
+            this.sessionInfo = faradayServerAPI.getSession();
+        } catch (UnauthorizedException e) {
+            log("The cookie has expired.");
             throw new CookieExpiredException();
         }
 
-
-        this.sessionInfo = response.readEntity(SessionInfo.class);
-
-        Map<String, NewCookie> cookies = response.getCookies();
-        if (cookies.containsKey("session")) {
-            this.cookie = cookies.get("session").getValue();
-        }
-
         log("Session set.");
-        log(this.sessionInfo.toString());
-
-    }
-
-    /**
-     * Issues a GET request to the server.
-     *
-     * @param method        The endpoint to send the request to.
-     * @param authenticated Whether or not the request is authenticated.
-     *
-     * @return The response object.
-     *
-     * @throws FaradayConnectionException if there was an error connecting to the Faraday Server
-     */
-    private Response get(final String method, final boolean authenticated) throws FaradayConnectionException {
-        try {
-            return buildRequest(method, authenticated).get();
-        } catch (ProcessingException | InvalidFaradayException e) {
-            log(e.getMessage());
-//            e.printStackTrace(this.stdout);
-            throw new FaradayConnectionException();
-        }
     }
 
     /**
@@ -386,33 +267,20 @@ public class FaradayConnector {
      *
      * @return A list of workspaces this user has access to.
      *
-     * @throws InvalidFaradayException If the Faraday Server URL is not valid, or an error occurred while sending the request.
+     * @throws InvalidFaradayServerException If the Faraday Server URL is not valid, or an error occurred while sending the request.
      */
-    List<Workspace> getWorkspaces() throws InvalidFaradayException, FaradayConnectionException {
+    List<Workspace> getWorkspaces() throws InvalidFaradayServerException, CookieExpiredException {
         if (!this.urlIsValid) {
-            throw new InvalidFaradayException();
+            throw new InvalidFaradayServerException();
         }
 
         log("Fetching workspaces");
 
-        Response response = get("v2/ws", true);
-
-        Workspace[] workspaceList = response.readEntity(Workspace[].class);
-
-        return Arrays.asList(workspaceList);
-    }
-
-    /**
-     * Issues an unauthenticated GET request
-     *
-     * @param method The method to send the request to.
-     *
-     * @return The response object.
-     *
-     * @throws FaradayConnectionException if there was an error connecting to the Faraday Server
-     */
-    private Response get(final String method) throws FaradayConnectionException {
-        return get(method, false);
+        try {
+            return faradayServerAPI.getWorkspaces();
+        } catch (UnauthorizedException e) {
+            throw new CookieExpiredException();
+        }
     }
 
     /**
@@ -421,7 +289,6 @@ public class FaradayConnector {
     public void logout() {
         log("Logging out");
 
-        this.cookie = null;
         this.sessionInfo = null;
         setBaseUrl(null);
     }
@@ -429,14 +296,6 @@ public class FaradayConnector {
 
     private void log(final String msg) {
         this.stdout.println("[CONNECTOR] " + msg);
-    }
-
-    String getCookie() {
-        return cookie;
-    }
-
-    void setCookie(String cookie) {
-        this.cookie = cookie;
     }
 
     public Workspace getCurrentWorkspace() {
@@ -452,109 +311,79 @@ public class FaradayConnector {
      *
      * @param vulnerability The vulnerability to create.
      */
-    void addVulnToWorkspace(Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
-
-        final int hostId = createHost(vulnerability.getHost());
-
-        final Service service = vulnerability.getService();
-        service.setParent(hostId);
-
-        final int serviceId = createService(service);
-        vulnerability.setParent(serviceId);
-
-        final int vulnId = createVulnerability(vulnerability);
-
-        log("Created vulnerability " + vulnId);
-
-
-    }
-
-    /**
-     * Adds a host to the current workspace.
-     *
-     * @param host The host to create.
-     *
-     * @return The ID of the created host, or the existing one.
-     *
-     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
-     * @throws ObjectNotCreatedException If the object could not be created.
-     */
-    private int createHost(final Host host) throws InvalidFaradayException, ObjectNotCreatedException {
-        log("Creating host: " + host.toString());
-
-        WebTarget target = this.buildTargetForCurrentWorkspace().path("hosts/");
-
-        return createObject(target, host);
-    }
-
-    /**
-     * Adds a Service to the current workspace.
-     *
-     * @param service The service to create.
-     *
-     * @return The ID of the created service, or the existing one.
-     *
-     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
-     * @throws ObjectNotCreatedException If the object could not be created.
-     */
-    private int createService(final Service service) throws InvalidFaradayException, ObjectNotCreatedException {
-        log("Creating service: " + service.toString());
-
-        WebTarget target = this.buildTargetForCurrentWorkspace().path("services/");
-
-        return createObject(target, service);
-    }
-
-    /**
-     * Adds a vulnerability to the current workspace.
-     *
-     * @param vulnerability The vulnerability to create.
-     *
-     * @return The ID of the created vulnerability, or the existing one.
-     *
-     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
-     * @throws ObjectNotCreatedException If the object could not be created.
-     */
-    private int createVulnerability(final Vulnerability vulnerability) throws InvalidFaradayException, ObjectNotCreatedException {
-        log("Creating vulnerability: " + vulnerability.toString());
-
-        WebTarget target = this.buildTargetForCurrentWorkspace().path("vulns/");
-
-        return createObject(target, vulnerability);
-    }
-
-    /**
-     * Adds an object to the current workspace.
-     *
-     * @param target The target to which to send the object.
-     * @param object The object to create.
-     *
-     * @return The ID of the created object, or the existing one.
-     *
-     * @throws InvalidFaradayException      If the Faraday Server URL is not valid, or an error occurred while sending the request.
-     * @throws ObjectNotCreatedException If the object could not be created.
-     */
-    private int createObject(final WebTarget target, final Object object) throws InvalidFaradayException, ObjectNotCreatedException {
-        Response response;
-        try {
-            response = post(target, true, object);
-        } catch (ObjectAlreadyExistsException e) {
-            final ExistingObjectEntity existingObject = e.getExistingObjectEntity();
-
-            log("Object already exists: " + existingObject);
-            return existingObject.getObject().getId();
+    void addVulnToWorkspace(Vulnerability vulnerability) throws InvalidFaradayServerException, ObjectNotCreatedException {
+        if (!this.urlIsValid) {
+            throw new InvalidFaradayServerException();
         }
+        final String workspace = currentWorkspace.getName();
 
-        final CreatedObjectEntity createdObjectEntity = response.readEntity(CreatedObjectEntity.class);
+        try {
 
-        log("Created object: " + createdObjectEntity.toString());
+            CreatedObjectEntity hostEntity;
+            try {
+                hostEntity = faradayServerAPI.createHost(workspace, vulnerability.getHost());
+            } catch (ConflictException e) {
+                hostEntity = e.getExistingObject().getObject();
+            }
 
-        return createdObjectEntity.getId();
+            final Service service = vulnerability.getService();
+            service.setParent(hostEntity.getId());
 
+            CreatedObjectEntity serviceEntity = null;
+            try {
+                serviceEntity = faradayServerAPI.createService(workspace, service);
+            } catch (ConflictException e) {
+                serviceEntity = e.getExistingObject().getObject();
+            }
+            vulnerability.setParent(serviceEntity.getId());
+
+            final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace, vulnerability);
+
+            log("Created vulnerability " + vulnerabilityEntity.getId());
+
+        } catch (UnauthorizedException e) {
+            throw new ObjectNotCreatedException();
+        }
     }
+
 
     public FaradayEdition getFaradayEdition() {
         return faradayEdition;
     }
+
+
+    static class FaradayErrorDecoder implements ErrorDecoder {
+
+        final Decoder decoder;
+        final ErrorDecoder defaultDecoder = new ErrorDecoder.Default();
+
+        FaradayErrorDecoder(Decoder decoder) {
+            this.decoder = decoder;
+        }
+
+        @Override
+        public Exception decode(String methodKey, Response response) {
+            try {
+                switch (response.status()) {
+                    case 401:
+                        return new UnauthorizedException();
+                    case 409:
+                        ExistingObjectEntity existingObject = (ExistingObjectEntity) decoder.decode(response, ExistingObjectEntity.class);
+
+                        return new ConflictException(existingObject);
+
+                    default:
+                        return FeignException.errorStatus(methodKey, response);
+                }
+            } catch (IOException fallbackToDefault) {
+                return defaultDecoder.decode(methodKey, response);
+            }
+        }
+    }
+
+    public static void clearCookies() {
+        COOKIE_MANAGER.getCookieStore().removeAll();
+    }
+
 }
 
