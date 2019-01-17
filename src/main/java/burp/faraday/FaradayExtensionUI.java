@@ -303,7 +303,6 @@ public class FaradayExtensionUI implements ITab {
         } catch (InvalidFaradayServerException e) {
 
             showErrorAlert("Invalid Faraday server URL.");
-            e.printStackTrace();
             return;
 
         }
@@ -327,7 +326,7 @@ public class FaradayExtensionUI implements ITab {
             showErrorAlert("Invalid token.");
             return;
         } catch (InvalidFaradayServerException e) {
-            e.printStackTrace(stdout);
+            showErrorAlert("Unable to connect to Faraday.");
         }
 
         notifyLoggedIn(true);
@@ -347,7 +346,7 @@ public class FaradayExtensionUI implements ITab {
         try {
             faradayConnector.validateFaradayURL();
         } catch (InvalidFaradayServerException e) {
-            showErrorAlert("Faraday URL is not a valid Faraday server.");
+            showErrorAlert("Faraday Server URL is not a valid Faraday server.");
             return;
         } catch (ServerTooOldException e) {
             showErrorAlert("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
@@ -528,7 +527,6 @@ public class FaradayExtensionUI implements ITab {
         } catch (ObjectNotCreatedException e) {
             log("Unable to create object tree");
             showErrorAlert("There was an error creating the objects.");
-            e.printStackTrace(stdout);
             return false;
         } catch (InvalidFaradayServerException e) {
             showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
