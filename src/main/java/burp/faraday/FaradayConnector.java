@@ -43,7 +43,7 @@ public class FaradayConnector {
     /**
      * Minimum version required to use the extension.
      */
-    private static final Version MINIMUM_VERSION = Version.valueOf("3.5.0");
+    private static final Version MINIMUM_VERSION = Version.valueOf("3.4.0");
 
     private final PrintWriter stdout;
     private FaradayServerAPI faradayServerAPI;
