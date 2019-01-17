@@ -250,7 +250,7 @@ public class FaradayExtensionUI implements ITab {
                 connect();
                 break;
             case CONNECTED:
-                login(false);
+                login();
                 break;
             case NEEDS_2FA:
                 verifyToken();
@@ -261,7 +261,7 @@ public class FaradayExtensionUI implements ITab {
         }
     }
 
-    private void login(boolean isSecondAttempt) {
+    private void login() {
         String username = usernameText.getText().trim();
 
         if (username.isEmpty()) {
@@ -406,6 +406,22 @@ public class FaradayExtensionUI implements ITab {
         extensionSettings.setFaradayURL(faradayUrlText.getText());
     }
 
+    public void notify2FATokenNeeded() {
+        usernameText.setEnabled(true);
+        passwordField.setEnabled(true);
+
+        faradayUrlText.setEditable(false);
+        usernameText.setEditable(false);
+        passwordField.setEditable(false);
+
+        secondFactorField.setEnabled(true);
+        secondFactorField.setEditable(true);
+
+        setStatus("2FA Token required");
+        statusButton.setText("Verify Token");
+        this.status = FaradayConnectorStatus.NEEDS_2FA;
+    }
+
     private void restoreSettings() {
         logout();
         extensionSettings.restore();
@@ -454,8 +470,10 @@ public class FaradayExtensionUI implements ITab {
 
             final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
 
+            final Workspace workspace = faradayConnector.getCurrentWorkspace();
+
             for (Vulnerability vulnerability : vulnerabilities) {
-                if (!addVulnerability(vulnerability)) {
+                if (!addVulnerability(vulnerability, workspace)) {
                     break;
                 }
             }
@@ -491,14 +509,22 @@ public class FaradayExtensionUI implements ITab {
     }
 
     public void showErrorAlert(final String message) {
-        log(message);
-        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Error", JOptionPane.ERROR_MESSAGE));
+        showAlert(message, JOptionPane.ERROR_MESSAGE);
     }
 
-    public boolean addVulnerability(final Vulnerability vulnerability) {
+    public void showInfoAlert(final String message) {
+        showAlert(message, JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showAlert(final String message, final int type) {
+        log(message);
+        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Info", type));
+    }
+
+    public boolean addVulnerability(final Vulnerability vulnerability, final Workspace workspace) {
 
         try {
-            faradayConnector.addVulnToWorkspace(vulnerability);
+            faradayConnector.addVulnerabilityToWorkspace(vulnerability, workspace);
         } catch (ObjectNotCreatedException e) {
             log("Unable to create object tree");
             showErrorAlert("There was an error creating the objects.");

@@ -9,6 +9,7 @@ package burp;
 import burp.faraday.FaradayConnector;
 import burp.faraday.FaradayExtensionUI;
 import burp.faraday.VulnerabilityMapper;
+import burp.faraday.Workspace;
 import burp.faraday.exceptions.InvalidCredentialsException;
 import burp.faraday.exceptions.InvalidFaradayServerException;
 import burp.faraday.exceptions.SecondFactorRequiredException;
@@ -72,18 +73,24 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             }
 
             try {
+
                 faradayConnector.login(extensionSettings.getUsername(), extensionSettings.getPassword());
+                faradayExtensionUI.notifyLoggedIn(false);
+
             } catch (SecondFactorRequiredException e) {
-                faradayExtensionUI.showErrorAlert("The 2FA token for Faraday is required");
-                return;
+
+                faradayExtensionUI.showInfoAlert("The 2FA token for Faraday is required");
+                faradayExtensionUI.notify2FATokenNeeded();
+
             } catch (InvalidCredentialsException e) {
+
                 faradayExtensionUI.showErrorAlert("Invalid credentials.");
-                return;
+
             } catch (InvalidFaradayServerException e) {
+
                 faradayExtensionUI.showErrorAlert("Faraday Server is down.");
-                return;
+
             }
-            faradayExtensionUI.notifyLoggedIn(false);
         }
 
         callbacks.addSuiteTab(faradayExtensionUI);
@@ -140,8 +147,10 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(issues).map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
 
+            final Workspace workspace = faradayConnector.getCurrentWorkspace();
+
             for (Vulnerability vulnerability : vulnerabilities) {
-                if (!faradayExtensionUI.addVulnerability(vulnerability)) {
+                if (!faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
                     break;
                 }
             }
@@ -156,8 +165,10 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(messages).map(VulnerabilityMapper::fromRequest).collect(Collectors.toList());
 
+            final Workspace workspace = faradayConnector.getCurrentWorkspace();
+
             for (Vulnerability vulnerability : vulnerabilities) {
-                if (!faradayExtensionUI.addVulnerability(vulnerability)) {
+                if (!faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
                     break;
                 }
             }
@@ -174,7 +185,12 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             return;
         }
 
-        FaradayExtensionUI.runInThread(() -> faradayExtensionUI.addVulnerability(VulnerabilityMapper.fromIssue(issue)));
+
+        FaradayExtensionUI.runInThread(() -> {
+            final Workspace workspace = faradayConnector.getCurrentWorkspace();
+            final Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
+            faradayExtensionUI.addVulnerability(vulnerability, workspace);
+        });
     }
 
 

@@ -10,10 +10,12 @@ package burp.faraday;
 import burp.faraday.exceptions.*;
 import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
-import burp.faraday.models.FaradayEdition;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
-import burp.faraday.models.responses.*;
+import burp.faraday.models.responses.CreatedObjectEntity;
+import burp.faraday.models.responses.ExistingObjectEntity;
+import burp.faraday.models.responses.LoginStatus;
+import burp.faraday.models.responses.ServerInfo;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
 import com.github.zafarkhaja.semver.Version;
@@ -51,10 +53,7 @@ public class FaradayConnector {
     private String baseUrl = null;
     private boolean urlIsValid = false;
 
-    private SessionInfo sessionInfo = null;
-
     private Workspace currentWorkspace = null;
-    private FaradayEdition faradayEdition;
 
     private static final CookieManager COOKIE_MANAGER = new CookieManager();
 
@@ -104,11 +103,11 @@ public class FaradayConnector {
         try {
             URI uri = URI.create(this.baseUrl);
             COOKIE_MANAGER.put(uri, h);
-            String sessionCookie = COOKIE_MANAGER.getCookieStore().get(uri).stream() // Stream<HttpCookie>
-                    .filter(cookie -> cookie.getName().equals("session"))
-                    .findFirst() // Optional<HttpCookie>
-                    .map(HttpCookie::getValue)
-                    .orElse("");
+//            String sessionCookie = COOKIE_MANAGER.getCookieStore().get(uri).stream() // Stream<HttpCookie>
+//                    .filter(cookie -> cookie.getName().equals("session"))
+//                    .findFirst() // Optional<HttpCookie>
+//                    .map(HttpCookie::getValue)
+//                    .orElse("");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -151,10 +150,8 @@ public class FaradayConnector {
             final String[] versionParts = serverInfo.getVersion().split("-");
 
             serverVersion = parseVersion(versionParts[1]);
-            this.faradayEdition = FaradayEdition.fromName(versionParts[0]);
         } else {
             serverVersion = parseVersion(serverInfo.getVersion());
-            this.faradayEdition = FaradayEdition.WHITE;
         }
 
         log("Faraday Server version: " + serverVersion.toString());
@@ -248,12 +245,12 @@ public class FaradayConnector {
      *
      * @throws CookieExpiredException If the cookie has already expired
      */
-    void getSession() throws CookieExpiredException {
+    private void getSession() throws CookieExpiredException {
 
         log("Fetching session info");
 
         try {
-            this.sessionInfo = faradayServerAPI.getSession();
+            faradayServerAPI.getSession();
         } catch (UnauthorizedException e) {
             log("The cookie has expired.");
             throw new CookieExpiredException();
@@ -289,8 +286,8 @@ public class FaradayConnector {
     public void logout() {
         log("Logging out");
 
-        this.sessionInfo = null;
-        setBaseUrl(null);
+        this.faradayServerAPI = null;
+        this.urlIsValid = false;
     }
 
 
@@ -311,17 +308,20 @@ public class FaradayConnector {
      *
      * @param vulnerability The vulnerability to create.
      */
-    void addVulnToWorkspace(Vulnerability vulnerability) throws InvalidFaradayServerException, ObjectNotCreatedException {
+    void addVulnerabilityToWorkspace(final Vulnerability vulnerability, final Workspace workspace)
+            throws InvalidFaradayServerException,
+            ObjectNotCreatedException {
+
         if (!this.urlIsValid) {
             throw new InvalidFaradayServerException();
         }
-        final String workspace = currentWorkspace.getName();
+//        final String workspace = getCurrentWorkspace().getName();
 
         try {
 
             CreatedObjectEntity hostEntity;
             try {
-                hostEntity = faradayServerAPI.createHost(workspace, vulnerability.getHost());
+                hostEntity = faradayServerAPI.createHost(workspace.getName(), vulnerability.getHost());
             } catch (ConflictException e) {
                 hostEntity = e.getExistingObject().getObject();
             }
@@ -329,15 +329,15 @@ public class FaradayConnector {
             final Service service = vulnerability.getService();
             service.setParent(hostEntity.getId());
 
-            CreatedObjectEntity serviceEntity = null;
+            CreatedObjectEntity serviceEntity;
             try {
-                serviceEntity = faradayServerAPI.createService(workspace, service);
+                serviceEntity = faradayServerAPI.createService(workspace.getName(), service);
             } catch (ConflictException e) {
                 serviceEntity = e.getExistingObject().getObject();
             }
             vulnerability.setParent(serviceEntity.getId());
 
-            final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace, vulnerability);
+            final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace.getName(), vulnerability);
 
             log("Created vulnerability " + vulnerabilityEntity.getId());
 
@@ -345,12 +345,6 @@ public class FaradayConnector {
             throw new ObjectNotCreatedException();
         }
     }
-
-
-    public FaradayEdition getFaradayEdition() {
-        return faradayEdition;
-    }
-
 
     static class FaradayErrorDecoder implements ErrorDecoder {
 
@@ -381,7 +375,7 @@ public class FaradayConnector {
         }
     }
 
-    public static void clearCookies() {
+    static void clearCookies() {
         COOKIE_MANAGER.getCookieStore().removeAll();
     }
 

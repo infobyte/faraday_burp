@@ -13,7 +13,6 @@ import burp.faraday.models.requests.User;
 import burp.faraday.models.responses.CreatedObjectEntity;
 import burp.faraday.models.responses.LoginStatus;
 import burp.faraday.models.responses.ServerInfo;
-import burp.faraday.models.responses.SessionInfo;
 import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
@@ -40,7 +39,7 @@ public interface FaradayServerAPI {
 
     @RequestLine("GET /_api/session")
     @Headers("Content-Type: application/json")
-    SessionInfo getSession() throws UnauthorizedException;
+    void getSession() throws UnauthorizedException;
 
     @RequestLine("GET /_api/v2/ws")
     @Headers("Content-Type: application/json")
