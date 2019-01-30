@@ -1,0 +1,1 @@
+# Faraday Extension for Burp
