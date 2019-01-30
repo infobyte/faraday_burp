@@ -315,7 +315,6 @@ public class FaradayConnector {
         if (!this.urlIsValid) {
             throw new InvalidFaradayServerException();
         }
-//        final String workspace = getCurrentWorkspace().getName();
 
         try {
 
