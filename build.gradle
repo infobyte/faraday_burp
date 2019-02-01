@@ -10,7 +10,7 @@ plugins {
 
 group = 'burp'
 version = '2.0'
-archivesBaseName = project.name
+archivesBaseName = 'faraday-burp'
 
 sourceCompatibility = 1.8
 
