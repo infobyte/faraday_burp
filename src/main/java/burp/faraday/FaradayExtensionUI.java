@@ -22,6 +22,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * This class will be responsible of drawing the UI of the extension inside Burp
+ */
 public class FaradayExtensionUI implements ITab {
 
     private JTextField faradayUrlText;
@@ -29,7 +32,6 @@ public class FaradayExtensionUI implements ITab {
     private JPasswordField passwordField;
     private JTextField secondFactorField;
     private JButton statusButton;
-
 
     private JLabel loginStatusLabel;
 
@@ -59,6 +61,7 @@ public class FaradayExtensionUI implements ITab {
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
 
+        // Initialize the three panels and arrange them in a vertical layout
         this.loginPanel = setupLoginPanel();
         this.settingsPannel = setupSettingsPanel();
         this.otherSettingsPanel = setupOtherSettingsPanel();
@@ -244,6 +247,9 @@ public class FaradayExtensionUI implements ITab {
         return otherSettingsPanel;
     }
 
+    /**
+     * State machine that depending on the status of the extension, will call the apropriate method.
+     */
     private void onStatusPressed() {
         switch (this.status) {
             case DISCONNECTED:
@@ -261,6 +267,9 @@ public class FaradayExtensionUI implements ITab {
         }
     }
 
+    /**
+     * Performs a login using the information filled in the fields.
+     */
     private void login() {
         String username = usernameText.getText().trim();
 
@@ -311,6 +320,9 @@ public class FaradayExtensionUI implements ITab {
         notifyLoggedIn(true);
     }
 
+    /**
+     * The server requested for a 2FA token.
+     */
     private void verifyToken() {
         String token = secondFactorField.getText().trim();
 
@@ -333,6 +345,9 @@ public class FaradayExtensionUI implements ITab {
         secondFactorField.setEditable(false);
     }
 
+    /**
+     * Connects tp the Faraday Server to validate the URL
+     */
     private void connect() {
         String faradayUrl = faradayUrlText.getText().trim();
 
@@ -362,6 +377,9 @@ public class FaradayExtensionUI implements ITab {
         this.status = FaradayConnectorStatus.CONNECTED;
     }
 
+    /**
+     * Logouts from the Faraday Server and clears any leftover state.
+     */
     private void logout() {
         faradayUrlText.setEditable(true);
         usernameText.setEditable(true);
@@ -385,6 +403,11 @@ public class FaradayExtensionUI implements ITab {
         disablePanel(settingsPannel);
     }
 
+    /**
+     * Notifies the UI that we have successfully logged in.
+     *
+     * @param showAlert Whether to show an alert or not.
+     */
     public void notifyLoggedIn(final boolean showAlert) {
         if (showAlert) {
             JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
@@ -405,6 +428,9 @@ public class FaradayExtensionUI implements ITab {
         extensionSettings.setFaradayURL(faradayUrlText.getText());
     }
 
+    /**
+     * Notifies the UI that a 2FA token is needed.
+     */
     public void notify2FATokenNeeded() {
         usernameText.setEnabled(true);
         passwordField.setEnabled(true);
@@ -421,6 +447,9 @@ public class FaradayExtensionUI implements ITab {
         this.status = FaradayConnectorStatus.NEEDS_2FA;
     }
 
+    /**
+     * Restores the default settings.
+     */
     private void restoreSettings() {
         logout();
         extensionSettings.restore();
@@ -428,6 +457,9 @@ public class FaradayExtensionUI implements ITab {
         faradayUrlText.setText(extensionSettings.getDefaultFaradayUrl());
     }
 
+    /**
+     * Loads the available workspaces from the Faraday Server and populates the combo box.
+     */
     private void loadWorkspaces() {
         String currentWorkspaceName = extensionSettings.getCurrentWorkspace();
 
@@ -450,6 +482,11 @@ public class FaradayExtensionUI implements ITab {
         }
     }
 
+    /**
+     * Callback for when a workspace is selected on the extension settings
+     *
+     * @param workspace The workspace that was selected.
+     */
     private void onWorkspaceSelected(Workspace workspace) {
         if (workspace == null) {
             return;
@@ -458,6 +495,11 @@ public class FaradayExtensionUI implements ITab {
         extensionSettings.setCurrentWorkspace(workspace.getName());
     }
 
+    /**
+     * Callback for when the user wants to import all the vulnerabilities.
+     *
+     * @param onlyInScope Only import vulnerabilities in the burp scope
+     */
     private void onImportCurrentVulns(boolean onlyInScope) {
         runInThread(() -> {
 
@@ -497,11 +539,21 @@ public class FaradayExtensionUI implements ITab {
         this.stdout.println("[UI] " + msg);
     }
 
+    /**
+     * Disables a panel and all its subcomponents.
+     *
+     * @param panel The panel to disable.
+     */
     private void disablePanel(Component panel) {
         Arrays.stream(((Container) panel).getComponents()).forEach(component -> component.setEnabled(false));
         panel.setEnabled(false);
     }
 
+    /**
+     * Enables a panel and all its subcomponents.
+     *
+     * @param panel The panel to enable.
+     */
     private void enablePanel(Component panel) {
         Arrays.stream(((Container) panel).getComponents()).forEach(component -> component.setEnabled(true));
         panel.setEnabled(true);
@@ -515,6 +567,12 @@ public class FaradayExtensionUI implements ITab {
         showAlert(message, JOptionPane.INFORMATION_MESSAGE);
     }
 
+    /**
+     * Shows an alert in a thread safe manner.
+     *
+     * @param message The message to show.
+     * @param type    The alert type.
+     */
     private void showAlert(final String message, final int type) {
         log(message);
         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Info", type));
@@ -536,6 +594,11 @@ public class FaradayExtensionUI implements ITab {
         return true;
     }
 
+    /**
+     * Runs a Runnable instance in a background thread.
+     *
+     * @param runnable The runnable to run.
+     */
     public static void runInThread(final Runnable runnable) {
         new SwingWorker<Void, Void>() {
 

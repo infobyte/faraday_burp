@@ -70,11 +70,18 @@ public class FaradayConnector {
 
         Decoder decoder = new GsonDecoder();
 
+        // Build an instance of Feign to communicate with the REST API
         faradayServerAPI = Feign.builder()
                 .logLevel(Logger.Level.FULL)
+
+                // Add the available cookies to every request
                 .requestInterceptor(this::addCookies)
                 .encoder(new GsonEncoder())
+
+                // Add a custom error decoder to dispatch the correct exceptions.
                 .errorDecoder(new FaradayErrorDecoder(decoder))
+
+                // Intercept requests and call this method to simulate a browser session.
                 .mapAndDecode((response, type) -> {
                     handleCookies(response.headers());
                     return response;
@@ -85,6 +92,9 @@ public class FaradayConnector {
         this.urlIsValid = false;
     }
 
+    /**
+     * Add a header to the request template with the value of the stored cookies.
+     */
     private void addCookies(RequestTemplate template) {
         URI uri = URI.create(this.baseUrl);
         COOKIE_MANAGER.getCookieStore().get(uri).stream()
@@ -92,6 +102,9 @@ public class FaradayConnector {
                 .forEach(cookie -> template.header("Cookie", cookie));
     }
 
+    /**
+     * Sore the cookies that the server returned so that we can add them to future requests.
+     */
     private void handleCookies(Map<String, Collection<String>> headers) {
         // From Map<String, Collection<String>> to Map<String, List<String>>
         Map<String, List<String>> h = headers.entrySet().stream()
@@ -146,11 +159,12 @@ public class FaradayConnector {
         final Version serverVersion;
 
         if (serverInfo.getVersion().contains("-")) {
-
+            // The version has the license type, we should strip it.
             final String[] versionParts = serverInfo.getVersion().split("-");
 
             serverVersion = parseVersion(versionParts[1]);
         } else {
+            // The server is the White edition, no license type in the version.
             serverVersion = parseVersion(serverInfo.getVersion());
         }
 
@@ -184,6 +198,7 @@ public class FaradayConnector {
             throw new InvalidFaradayServerException();
         }
 
+        // Lets clear the cookies just in case.
         FaradayConnector.clearCookies();
 
         final User user = new User(username, password);
@@ -318,6 +333,7 @@ public class FaradayConnector {
 
         try {
 
+            // First create the host and store the id.
             CreatedObjectEntity hostEntity;
             try {
                 hostEntity = faradayServerAPI.createHost(workspace.getName(), vulnerability.getHost());
@@ -325,6 +341,7 @@ public class FaradayConnector {
                 hostEntity = e.getExistingObject().getObject();
             }
 
+            // Instantiate the Service and set the parent ID
             final Service service = vulnerability.getService();
             service.setParent(hostEntity.getId());
 
@@ -334,6 +351,8 @@ public class FaradayConnector {
             } catch (ConflictException e) {
                 serviceEntity = e.getExistingObject().getObject();
             }
+
+            // Set the parent ID of the vulnerability, and issue the creation request.
             vulnerability.setParent(serviceEntity.getId());
 
             final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace.getName(), vulnerability);
@@ -345,6 +364,9 @@ public class FaradayConnector {
         }
     }
 
+    /**
+     * Decodes errors returned by the server and returns the correct exception to be raised.
+     */
     static class FaradayErrorDecoder implements ErrorDecoder {
 
         final Decoder decoder;
@@ -374,6 +396,9 @@ public class FaradayConnector {
         }
     }
 
+    /**
+     * Clears the cookies from the cookie jar to start a fresh session.
+     */
     static void clearCookies() {
         COOKIE_MANAGER.getCookieStore().removeAll();
     }

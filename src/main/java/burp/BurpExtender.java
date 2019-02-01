@@ -42,6 +42,12 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
     private FaradayExtensionUI faradayExtensionUI;
     private ExtensionSettings extensionSettings;
 
+    /**
+     * This method will be called by Burp to load the extension into the GUI.
+     * <p>
+     * We should read the settings, connect and login if necessary, and register ourselves for
+     * Burp events.
+     */
     @Override
     public void registerExtenderCallbacks(IBurpExtenderCallbacks callbacks) {
         callbacks.setExtensionName(EXTENSION_NAME);
@@ -56,6 +62,9 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         this.faradayExtensionUI = new FaradayExtensionUI(stdout, callbacks, faradayConnector, extensionSettings);
 
         if (!extensionSettings.getUsername().isEmpty() && !extensionSettings.getPassword().isEmpty()) {
+
+            // We found the username and password saved in the settings. That's all we need to authenticate.
+
             log("Settings found");
             log("Faraday Server URL: " + extensionSettings.getFaradayURL());
             log("Username: " + extensionSettings.getUsername());
@@ -107,6 +116,11 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
 
     }
 
+    /**
+     * Callback used to add menu items.
+     * <p>
+     * We will add an item in the scanner results and the request lists.
+     */
     @Override
     public List<JMenuItem> createMenuItems(IContextMenuInvocation invocation) {
         final ArrayList<JMenuItem> menu = new ArrayList<>();
@@ -131,17 +145,22 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
                 menu.add(menuItem);
 
                 break;
-
         }
 
         return menu;
     }
 
+    /**
+     * The user has requested to import a list of issues to Faraday.
+     *
+     * @param issues The list of issues to import
+     */
     private void onSendVulnsToFaraday(IScanIssue[] issues) {
         if (issues == null) {
             return;
         }
 
+        // Run the import on a separate thread
         FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(issues).map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
 
@@ -155,11 +174,17 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         });
     }
 
+    /**
+     * The user has requested to import a list of requests to Faraday.
+     *
+     * @param messages The list of requests to import
+     */
     private void onSendRequestsToFaraday(IHttpRequestResponse[] messages) {
         if (messages == null) {
             return;
         }
 
+        // Run the import on a separate thread
         FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(messages).map(VulnerabilityMapper::fromRequest).collect(Collectors.toList());
 
@@ -177,13 +202,19 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         this.stdout.println("[EXTENDER] " + msg);
     }
 
+    /**
+     * Callback for when an issue is added to the scanner results.
+     *
+     * @param issue The issue just added.
+     */
     @Override
     public void newScanIssue(IScanIssue issue) {
         if (!extensionSettings.importNewVulns()) {
+            // The user has the automatic imports turned off.
             return;
         }
 
-
+        //Run the import on a separate thread
         FaradayExtensionUI.runInThread(() -> {
             final Workspace workspace = faradayConnector.getCurrentWorkspace();
             final Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
