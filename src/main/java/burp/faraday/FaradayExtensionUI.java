@@ -12,6 +12,7 @@ import burp.ITab;
 import burp.faraday.exceptions.*;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.FaradayConnectorStatus;
+import burp.faraday.models.Workspace;
 import burp.faraday.models.vulnerability.Vulnerability;
 
 import javax.swing.*;

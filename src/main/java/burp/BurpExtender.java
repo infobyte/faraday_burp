@@ -9,7 +9,7 @@ package burp;
 import burp.faraday.FaradayConnector;
 import burp.faraday.FaradayExtensionUI;
 import burp.faraday.VulnerabilityMapper;
-import burp.faraday.Workspace;
+import burp.faraday.models.Workspace;
 import burp.faraday.exceptions.InvalidCredentialsException;
 import burp.faraday.exceptions.InvalidFaradayServerException;
 import burp.faraday.exceptions.SecondFactorRequiredException;

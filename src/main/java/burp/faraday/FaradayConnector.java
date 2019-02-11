@@ -10,6 +10,7 @@ package burp.faraday;
 import burp.faraday.exceptions.*;
 import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
+import burp.faraday.models.Workspace;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
 import burp.faraday.models.responses.CreatedObjectEntity;
