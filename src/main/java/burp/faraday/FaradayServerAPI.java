@@ -77,7 +77,7 @@ public interface FaradayServerAPI {
      *
      * @throws UnauthorizedException If the session has expired.
      */
-    @RequestLine("GET /_api/v2/ws")
+    @RequestLine("GET /_api/v2/ws/")
     @Headers("Content-Type: application/json")
     List<Workspace> getWorkspaces() throws UnauthorizedException;
 
