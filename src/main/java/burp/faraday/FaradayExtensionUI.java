@@ -504,20 +504,34 @@ public class FaradayExtensionUI implements ITab {
     private void onImportCurrentVulns(boolean onlyInScope) {
         runInThread(() -> {
 
-            List<IScanIssue> issues = Arrays.asList(callbacks.getScanIssues(null));
-
-            if (onlyInScope) {
-                issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
-            }
-
-            final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
-
-            final Workspace workspace = faradayConnector.getCurrentWorkspace();
-
-            for (Vulnerability vulnerability : vulnerabilities) {
-                if (!addVulnerability(vulnerability, workspace)) {
-                    break;
+            try {
+                IScanIssue[] scanIssuesArray = null;
+                scanIssuesArray = callbacks.getScanIssues(null);
+                if (scanIssuesArray == null){
+                        showErrorAlert("This option is only available for Burp Pro.");
+                        return ;
                 }
+                List<IScanIssue> issues = Arrays.asList(scanIssuesArray);
+                if (onlyInScope) {
+                    issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
+                }
+
+                final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
+
+                final Workspace workspace = faradayConnector.getCurrentWorkspace();
+
+                if (issues.size() > 0){
+                    showInfoAlert("Sending " + issues.size() + " vulnerabilities to Faraday.");
+                    for (Vulnerability vulnerability : vulnerabilities) {
+                        if (!addVulnerability(vulnerability, workspace)) {
+                            break;
+                        }
+                    }
+                }else{
+                    showInfoAlert("No vulnerabilities found.");
+                }
+            } catch (Exception e) {
+                log("Error: " + e);
             }
         });
     }
