@@ -35,6 +35,7 @@ public class FaradayExtensionUI implements ITab {
     private JButton statusButton;
 
     private JLabel loginStatusLabel;
+    private JLabel statusLabel;
 
     private JPanel tab;
     private PrintWriter stdout;
@@ -45,6 +46,7 @@ public class FaradayExtensionUI implements ITab {
     private Component loginPanel;
     private Component settingsPannel;
     private Component otherSettingsPanel;
+    private Component statusPanel;
 
     private JComboBox<Workspace> workspaceCombo;
 
@@ -66,12 +68,15 @@ public class FaradayExtensionUI implements ITab {
         this.loginPanel = setupLoginPanel();
         this.settingsPannel = setupSettingsPanel();
         this.otherSettingsPanel = setupOtherSettingsPanel();
+        this.statusPanel = setupStatusPanel();
+
 
         layout.setHorizontalGroup(
                 layout.createParallelGroup()
                         .addComponent(loginPanel)
                         .addComponent(settingsPannel)
                         .addComponent(otherSettingsPanel)
+                        .addComponent(statusPanel)
         );
 
         layout.setVerticalGroup(
@@ -79,10 +84,10 @@ public class FaradayExtensionUI implements ITab {
                         .addComponent(loginPanel)
                         .addComponent(settingsPannel)
                         .addComponent(otherSettingsPanel)
+                        .addComponent(statusPanel)
         );
 
-        layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel, otherSettingsPanel);
-
+        layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel, otherSettingsPanel, statusPanel);
         disablePanel(settingsPannel);
 
     }
@@ -179,7 +184,7 @@ public class FaradayExtensionUI implements ITab {
         importNewVulnsCheckbox.setSelected(extensionSettings.importNewVulns());
 
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
-        importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected()));
+        importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected(), importCurrentVulnsButton));
 
         JLabel workspaceLabel = new JLabel("Active workspace: ");
         workspaceCombo = new JComboBox<>();
@@ -248,6 +253,33 @@ public class FaradayExtensionUI implements ITab {
         return otherSettingsPanel;
     }
 
+    private Component setupStatusPanel() {
+        JPanel statusPanet = new JPanel();
+        statusPanet.setBorder(BorderFactory.createTitledBorder("Status"));
+
+        statusLabel = new JLabel("...");
+
+
+        GroupLayout layout = new GroupLayout(statusPanet);
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+
+        statusPanet.setLayout(layout);
+
+        layout.setHorizontalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup()
+                        .addComponent(statusLabel)
+                )
+        );
+
+        layout.setVerticalGroup(layout.createSequentialGroup()
+                .addComponent(statusLabel)
+        );
+
+
+        return statusPanet;
+    }
+
     /**
      * State machine that depending on the status of the extension, will call the apropriate method.
      */
@@ -292,13 +324,13 @@ public class FaradayExtensionUI implements ITab {
 
             showErrorAlert("Invalid credentials.");
             passwordField.setText("");
-            setStatus("Invalid credentials");
+            setLoginStatus("Invalid credentials");
             return;
 
         } catch (SecondFactorRequiredException e) {
 
             secondFactorField.setEnabled(true);
-            setStatus("2FA Token required");
+            setLoginStatus("2FA Token required");
             statusButton.setText("Verify Token");
 
             usernameText.setEditable(false);
@@ -374,7 +406,7 @@ public class FaradayExtensionUI implements ITab {
         statusButton.setText("Login");
 
         faradayUrlText.setEditable(false);
-        setStatus("Connected");
+        setLoginStatus("Connected");
         this.status = FaradayConnectorStatus.CONNECTED;
     }
 
@@ -391,7 +423,7 @@ public class FaradayExtensionUI implements ITab {
         secondFactorField.setEnabled(false);
         secondFactorField.setText("");
 
-        setStatus("Not connected");
+        setLoginStatus("Not connected");
 
         statusButton.setText("Connect");
         this.status = FaradayConnectorStatus.DISCONNECTED;
@@ -411,6 +443,7 @@ public class FaradayExtensionUI implements ITab {
      */
     public void notifyLoggedIn(final boolean showAlert) {
         if (showAlert) {
+            setStatus("Logged in");
             JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
         }
 
@@ -419,7 +452,7 @@ public class FaradayExtensionUI implements ITab {
         passwordField.setEditable(false);
 
         statusButton.setText("Logout");
-        setStatus("Logged in");
+        setLoginStatus("Logged in");
         this.status = FaradayConnectorStatus.LOGGED_IN;
         loadWorkspaces();
         enablePanel(settingsPannel);
@@ -443,7 +476,7 @@ public class FaradayExtensionUI implements ITab {
         secondFactorField.setEnabled(true);
         secondFactorField.setEditable(true);
 
-        setStatus("2FA Token required");
+        setLoginStatus("2FA Token required");
         statusButton.setText("Verify Token");
         this.status = FaradayConnectorStatus.NEEDS_2FA;
     }
@@ -501,38 +534,54 @@ public class FaradayExtensionUI implements ITab {
      *
      * @param onlyInScope Only import vulnerabilities in the burp scope
      */
-    private void onImportCurrentVulns(boolean onlyInScope) {
+    private void onImportCurrentVulns(boolean onlyInScope, JButton button) {
         runInThread(() -> {
-
+            int vuln_count;
+            int created_vulns = 0;
             try {
+
+                button.setEnabled(false);
                 IScanIssue[] scanIssuesArray = null;
                 scanIssuesArray = callbacks.getScanIssues(null);
                 if (scanIssuesArray == null){
                         showErrorAlert("This option is only available for Burp Pro.");
                         return ;
                 }
+
                 List<IScanIssue> issues = Arrays.asList(scanIssuesArray);
                 if (onlyInScope) {
                     issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
                 }
 
                 final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
-
                 final Workspace workspace = faradayConnector.getCurrentWorkspace();
-
+                vuln_count = issues.size();
+                String message = "Sending " + vuln_count + " vulnerabilities to faraday...";
+                log(message);
+                setStatus(message);
                 if (issues.size() > 0){
-                    showInfoAlert("Sending " + issues.size() + " vulnerabilities to Faraday.");
+
                     for (Vulnerability vulnerability : vulnerabilities) {
-                        if (!addVulnerability(vulnerability, workspace)) {
-                            break;
+                        if (addVulnerability(vulnerability, workspace)) {
+                            log("Created Vulnerability");
+                            created_vulns ++;
                         }
                     }
+                    message = "Created " + created_vulns + " of " + vuln_count + " vulnerabilities on Faraday.";
+                    setStatus(message);
+                    showInfoAlert(message);
                 }else{
-                    showInfoAlert("No vulnerabilities found.");
+                    message = "No vulnerabilities found.";
+                    showInfoAlert(message);
+                    setStatus(message);
                 }
+
             } catch (Exception e) {
+                showInfoAlert("Error: " + e);
                 log("Error: " + e);
             }
+            button.setEnabled(true);
+
         });
     }
 
@@ -546,8 +595,13 @@ public class FaradayExtensionUI implements ITab {
         return this.tab;
     }
 
-    private void setStatus(final String status) {
+    private void setLoginStatus(final String status) {
         loginStatusLabel.setText(status);
+        setStatus(status);
+    }
+
+    public void setStatus(final String status) {
+        statusLabel.setText(status);
     }
 
     private void log(final String msg) {
@@ -598,11 +652,13 @@ public class FaradayExtensionUI implements ITab {
         try {
             faradayConnector.addVulnerabilityToWorkspace(vulnerability, workspace);
         } catch (ObjectNotCreatedException e) {
-            log("Unable to create object tree");
-            showErrorAlert("There was an error creating the objects.");
+            log("Unable to create object tree: " + e);
             return false;
         } catch (InvalidFaradayServerException e) {
             showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
+            return false;
+        } catch (Exception e) {
+            log("Add Vuln Error: " + e);
             return false;
         }
 

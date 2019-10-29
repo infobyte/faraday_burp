@@ -9,7 +9,7 @@ plugins {
 }
 
 group = 'burp'
-version = 'v2.1-alpha1'
+version = 'v2.3'
 archivesBaseName = 'faraday-burp'
 
 sourceCompatibility = 1.8

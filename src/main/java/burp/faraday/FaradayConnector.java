@@ -355,10 +355,12 @@ public class FaradayConnector {
 
             // Set the parent ID of the vulnerability, and issue the creation request.
             vulnerability.setParent(serviceEntity.getId());
-
-            final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace.getName(), vulnerability);
-
-            log("Created vulnerability " + vulnerabilityEntity.getId());
+            try {
+                final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace.getName(), vulnerability);
+            } catch (Exception e) {
+                throw new ObjectNotCreatedException();
+            }
+            //log("Created vulnerability " + vulnerabilityEntity.getId());
 
         } catch (UnauthorizedException e) {
             throw new ObjectNotCreatedException();

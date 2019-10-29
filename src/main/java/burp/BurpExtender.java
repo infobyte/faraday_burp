@@ -28,9 +28,9 @@ import static burp.IContextMenuInvocation.*;
 
 public class BurpExtender implements IBurpExtender, IExtensionStateListener, IScannerListener, IContextMenuFactory {
 
-    private static final String EXTENSION_VERSION = "2.1";
+    private static final String EXTENSION_VERSION = "2.3";
 
-    private static final String EXTENSION_NAME = "Faraday for Burp v" + EXTENSION_VERSION;
+    private static final String EXTENSION_NAME = "Faraday plugin for Burp (v: " + EXTENSION_VERSION+")";
 
     private IBurpExtenderCallbacks callbacks;
     private PrintWriter stdout;
@@ -163,14 +163,24 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         // Run the import on a separate thread
         FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(issues).map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
-
+            int vuln_count = vulnerabilities.size();
+            int created_vulns = 0;
             final Workspace workspace = faradayConnector.getCurrentWorkspace();
-
+            this.faradayExtensionUI.setStatus("Sending Vulns...");
+            log("Sending Vulns...");
             for (Vulnerability vulnerability : vulnerabilities) {
-                if (!faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
-                    break;
+                if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
+                    created_vulns ++;
                 }
             }
+            String message = "Created " + created_vulns + " of " + vuln_count + " vulns";
+            if (created_vulns != vuln_count){
+                this.faradayExtensionUI.showErrorAlert(message);
+            }else{
+                this.faradayExtensionUI.showInfoAlert(message);
+            }
+
+            this.faradayExtensionUI.setStatus(message);
         });
     }
 
@@ -187,14 +197,24 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         // Run the import on a separate thread
         FaradayExtensionUI.runInThread(() -> {
             final List<Vulnerability> vulnerabilities = Arrays.stream(messages).map(VulnerabilityMapper::fromRequest).collect(Collectors.toList());
-
+            int vuln_count = vulnerabilities.size();
+            int created_vulns = 0;
             final Workspace workspace = faradayConnector.getCurrentWorkspace();
-
+            this.faradayExtensionUI.setStatus("Sending Requests...");
+            log("Sending Vulns...");
             for (Vulnerability vulnerability : vulnerabilities) {
-                if (!faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
-                    break;
+                if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
+                    created_vulns ++;
                 }
             }
+            String message = "Created " + created_vulns + " of " + vuln_count + " requests";
+            if (created_vulns != vuln_count){
+                this.faradayExtensionUI.showErrorAlert(message);
+            }else{
+                this.faradayExtensionUI.showInfoAlert(message);
+            }
+
+            this.faradayExtensionUI.setStatus(message);
         });
     }
 
