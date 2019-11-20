@@ -20,8 +20,10 @@ import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.text.SimpleDateFormat;
 
 /**
  * This class will be responsible of drawing the UI of the extension inside Burp
@@ -36,6 +38,7 @@ public class FaradayExtensionUI implements ITab {
 
     private JLabel loginStatusLabel;
     private JLabel statusLabel;
+    private JTextArea messagesTextArea;
 
     private JPanel tab;
     private PrintWriter stdout;
@@ -47,6 +50,7 @@ public class FaradayExtensionUI implements ITab {
     private Component settingsPannel;
     private Component otherSettingsPanel;
     private Component statusPanel;
+    private Component messagesPanel;
 
     private JComboBox<Workspace> workspaceCombo;
 
@@ -69,22 +73,37 @@ public class FaradayExtensionUI implements ITab {
         this.settingsPannel = setupSettingsPanel();
         this.otherSettingsPanel = setupOtherSettingsPanel();
         this.statusPanel = setupStatusPanel();
-
+        this.messagesPanel = setupMessagesPanel();
 
         layout.setHorizontalGroup(
-                layout.createParallelGroup()
-                        .addComponent(loginPanel)
-                        .addComponent(settingsPannel)
-                        .addComponent(otherSettingsPanel)
-                        .addComponent(statusPanel)
+                layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addComponent(loginPanel)
+                                .addComponent(settingsPannel)
+                                .addComponent(otherSettingsPanel)
+                                .addComponent(statusPanel)
+                        )
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addComponent(messagesPanel)
+
+                        )
+
+
         );
 
         layout.setVerticalGroup(
                 layout.createSequentialGroup()
-                        .addComponent(loginPanel)
-                        .addComponent(settingsPannel)
-                        .addComponent(otherSettingsPanel)
-                        .addComponent(statusPanel)
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addGroup(layout.createSequentialGroup()
+                                        .addComponent(loginPanel)
+                                        .addComponent(settingsPannel)
+                                        .addComponent(otherSettingsPanel)
+                                        .addComponent(statusPanel)
+                                )
+                                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                        .addComponent(messagesPanel)
+                                )
+                        )
         );
 
         layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel, otherSettingsPanel, statusPanel);
@@ -280,6 +299,38 @@ public class FaradayExtensionUI implements ITab {
         return statusPanet;
     }
 
+    private Component setupMessagesPanel() {
+        JPanel messagesPanel = new JPanel();
+        messagesPanel.setBorder(BorderFactory.createTitledBorder("Messages"));
+        messagesTextArea = new JTextArea();
+
+        messagesTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(messagesTextArea);
+        JButton clearButton = new JButton("Clear messages");
+        clearButton.addActionListener(actionEvent -> messagesTextArea.setText(null));
+
+        GroupLayout layout = new GroupLayout(messagesPanel);
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+
+        messagesPanel.setLayout(layout);
+
+        layout.setHorizontalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup()
+                        .addComponent(scrollPane, 500, 500, 500)
+                        .addComponent(clearButton)
+                )
+        );
+
+        layout.setVerticalGroup(layout.createSequentialGroup()
+                .addComponent(scrollPane, 406, 406, 406)
+                .addComponent(clearButton)
+        );
+
+
+        return messagesPanel;
+    }
+
     /**
      * State machine that depending on the status of the extension, will call the apropriate method.
      */
@@ -351,6 +402,7 @@ public class FaradayExtensionUI implements ITab {
 
         extensionSettings.setUsername(username);
         notifyLoggedIn(true);
+
     }
 
     /**
@@ -407,6 +459,7 @@ public class FaradayExtensionUI implements ITab {
 
         faradayUrlText.setEditable(false);
         setLoginStatus("Connected");
+        log("Connected");
         this.status = FaradayConnectorStatus.CONNECTED;
     }
 
@@ -426,6 +479,7 @@ public class FaradayExtensionUI implements ITab {
         setLoginStatus("Not connected");
 
         statusButton.setText("Connect");
+        log("Logout");
         this.status = FaradayConnectorStatus.DISCONNECTED;
 
         faradayConnector.logout();
@@ -442,15 +496,14 @@ public class FaradayExtensionUI implements ITab {
      * @param showAlert Whether to show an alert or not.
      */
     public void notifyLoggedIn(final boolean showAlert) {
+        log("Logged in");
         if (showAlert) {
             setStatus("Logged in");
             JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
         }
-
         faradayUrlText.setEditable(false);
         usernameText.setEditable(false);
         passwordField.setEditable(false);
-
         statusButton.setText("Logout");
         setLoginStatus("Logged in");
         this.status = FaradayConnectorStatus.LOGGED_IN;
@@ -478,6 +531,7 @@ public class FaradayExtensionUI implements ITab {
 
         setLoginStatus("2FA Token required");
         statusButton.setText("Verify Token");
+        log("Verify Token");
         this.status = FaradayConnectorStatus.NEEDS_2FA;
     }
 
@@ -556,7 +610,7 @@ public class FaradayExtensionUI implements ITab {
                 final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
                 final Workspace workspace = faradayConnector.getCurrentWorkspace();
                 vuln_count = issues.size();
-                String message = "Sending " + vuln_count + " vulnerabilities to faraday...";
+                String message = "Sending " + vuln_count + " vulnerabilities";
                 log(message);
                 setStatus(message);
                 if (issues.size() > 0){
@@ -567,7 +621,7 @@ public class FaradayExtensionUI implements ITab {
                             created_vulns ++;
                         }
                     }
-                    message = "Created " + created_vulns + " of " + vuln_count + " vulnerabilities on Faraday.";
+                    message = "Created " + created_vulns + " of " + vuln_count + " vulnerabilities";
                     setStatus(message);
                     showInfoAlert(message);
                 }else{
@@ -606,8 +660,14 @@ public class FaradayExtensionUI implements ITab {
 
     private void log(final String msg) {
         this.stdout.println("[UI] " + msg);
+        addMessage(msg);
     }
 
+    public void addMessage(final String message){
+        Date date = new Date();
+        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        messagesTextArea.append("[" + formatter.format(date) + "] " + message + "\n");
+    }
     /**
      * Disables a panel and all its subcomponents.
      *

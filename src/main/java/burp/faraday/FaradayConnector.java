@@ -10,6 +10,7 @@ package burp.faraday;
 import burp.faraday.exceptions.*;
 import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
+import burp.faraday.exceptions.http.BadRequestException;
 import burp.faraday.models.Workspace;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
@@ -207,6 +208,9 @@ public class FaradayConnector {
         LoginStatus loginStatus;
         try {
             loginStatus = faradayServerAPI.login(user);
+        } catch (BadRequestException e) {
+            log("Invalid credentials.");
+            throw new InvalidCredentialsException();
         } catch (UnauthorizedException e) {
             log("Invalid credentials.");
             throw new InvalidCredentialsException();
@@ -383,6 +387,8 @@ public class FaradayConnector {
         public Exception decode(String methodKey, Response response) {
             try {
                 switch (response.status()) {
+                    case 400:
+                        return new BadRequestException();
                     case 401:
                         return new UnauthorizedException();
                     case 409:

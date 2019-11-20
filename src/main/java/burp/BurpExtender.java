@@ -166,14 +166,16 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             int vuln_count = vulnerabilities.size();
             int created_vulns = 0;
             final Workspace workspace = faradayConnector.getCurrentWorkspace();
-            this.faradayExtensionUI.setStatus("Sending Vulns...");
-            log("Sending Vulns...");
+            this.faradayExtensionUI.setStatus("Sending " + vuln_count + " vulnerabilities...");
+            log("Sending " + vuln_count + " vulnerabilities...");
+            this.faradayExtensionUI.addMessage("Sending " + vuln_count + " vulnerabilities...");
             for (Vulnerability vulnerability : vulnerabilities) {
                 if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
+                    this.faradayExtensionUI.addMessage("Created Vulnerability");
                     created_vulns ++;
                 }
             }
-            String message = "Created " + created_vulns + " of " + vuln_count + " vulns";
+            String message = "Created " + created_vulns + " of " + vuln_count + " Vulnerabilities";
             if (created_vulns != vuln_count){
                 this.faradayExtensionUI.showErrorAlert(message);
             }else{
@@ -200,10 +202,12 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             int vuln_count = vulnerabilities.size();
             int created_vulns = 0;
             final Workspace workspace = faradayConnector.getCurrentWorkspace();
-            this.faradayExtensionUI.setStatus("Sending Requests...");
-            log("Sending Vulns...");
+            this.faradayExtensionUI.setStatus("Sending " + vuln_count + " requests..." );
+            log("Sending " + vuln_count + " requests...");
+            this.faradayExtensionUI.addMessage("Sending " + vuln_count + " requests...");
             for (Vulnerability vulnerability : vulnerabilities) {
                 if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
+                    this.faradayExtensionUI.addMessage("Created Request");
                     created_vulns ++;
                 }
             }

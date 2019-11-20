@@ -8,6 +8,7 @@ package burp.faraday;
 
 import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
+import burp.faraday.exceptions.http.BadRequestException;
 import burp.faraday.models.Workspace;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
@@ -42,11 +43,11 @@ public interface FaradayServerAPI {
      *
      * @return An instance of {@link LoginStatus} describing the response of the server.
      *
-     * @throws UnauthorizedException If we were unable to authenticate the user.
+     * @throws UnauthorizedException or BadRequestException If we were unable to authenticate the user.
      */
     @RequestLine("POST /_api/login")
     @Headers("Content-Type: application/json")
-    LoginStatus login(User user) throws UnauthorizedException;
+    LoginStatus login(User user) throws UnauthorizedException, BadRequestException;
 
     /**
      * Attempts to verify the token provided in {@link SecondFactor} against the Server,
