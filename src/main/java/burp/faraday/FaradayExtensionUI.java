@@ -197,15 +197,16 @@ public class FaradayExtensionUI implements ITab {
         JPanel settingsPannel = new JPanel();
         settingsPannel.setBorder(BorderFactory.createTitledBorder("Extension Settings"));
         JCheckBox inScopeCheckbox = new JCheckBox("Only in Burp scope");
+        JSeparator componentsSeparator = new JSeparator(SwingConstants.VERTICAL);
 
-        JCheckBox importNewVulnsCheckbox = new JCheckBox("Import new vulnerabilities automatically");
+        JCheckBox importNewVulnsCheckbox = new JCheckBox("Auto import new vulnerabilities");
         importNewVulnsCheckbox.addItemListener(itemEvent -> extensionSettings.setImportNewVulns(itemEvent.getStateChange() == ItemEvent.SELECTED));
         importNewVulnsCheckbox.setSelected(extensionSettings.importNewVulns());
 
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
         importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected(), importCurrentVulnsButton));
 
-        JLabel workspaceLabel = new JLabel("Active workspace: ");
+        JLabel workspaceLabel = new JLabel("Active workspace:");
         workspaceCombo = new JComboBox<>();
         workspaceCombo.setEnabled(false);
 
@@ -218,29 +219,36 @@ public class FaradayExtensionUI implements ITab {
         settingsPannel.setLayout(layout);
 
         layout.setHorizontalGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup()
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addComponent(importNewVulnsCheckbox)
+                        .addComponent(inScopeCheckbox)
                         .addComponent(importCurrentVulnsButton)
-                        .addComponent(workspaceLabel)
+
                 )
                 .addGroup(layout.createParallelGroup()
-                        .addComponent(inScopeCheckbox)
+                    .addComponent(componentsSeparator)
+                )
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addComponent(workspaceLabel)
                         .addComponent(workspaceCombo)
                 )
         );
 
         layout.setVerticalGroup(layout.createSequentialGroup()
-                .addComponent(importNewVulnsCheckbox)
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
-                        .addComponent(importCurrentVulnsButton)
-                        .addComponent(inScopeCheckbox)
-                )
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                        .addComponent(importNewVulnsCheckbox)
                         .addComponent(workspaceLabel)
-                        .addComponent(workspaceCombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(componentsSeparator)
                 )
 
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                        .addComponent(inScopeCheckbox)
+                        .addComponent(workspaceCombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                )
+                .addComponent(importCurrentVulnsButton)
+
         );
+        layout.linkSize(SwingConstants.VERTICAL, workspaceLabel, componentsSeparator);
 
         return settingsPannel;
     }
