@@ -35,7 +35,7 @@ publish_files:
         - export PLUGIN_VERSION=$(grep -nr 'EXTENSION_VERSION =' * | cut -f2 -d= | tr -d \" | tr -d \; | tr -d '[:space:]')
     script:
         - ls build/libs/faraday-burp-v$PLUGIN_VERSION.jar
-        - gsutil cp -Rn build/libs/faraday-burp-v$PLUGIN_VERSION.jar gs://faraday-build/burp/faraday-burp-latest.jar 2>&1 "
+        - gsutil cp -Rn build/libs/faraday-burp-v$PLUGIN_VERSION.jar gs://faraday-build/burp/faraday-burp-latest.jar "
 
     dependencies:
         - build
