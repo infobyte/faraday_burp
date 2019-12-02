@@ -6,7 +6,6 @@ stages:
 
 before_script:
   - export GRADLE_USER_HOME=`pwd`/.gradle
-  - check_not_skipped(){ grep -v 'Skipping'; }
 
 cache:
   paths:
@@ -30,11 +29,12 @@ publish_files:
     stage: publish
     image: 'google/cloud-sdk:latest'
     before_script:
+        - check_not_skipped(){ grep -v 'Skipping'; }
         - echo $DEPLOY_KEY_FILE_PRODUCTION > /tmp/$CI_PIPELINE_ID.json
         - gcloud auth activate-service-account --key-file /tmp/$CI_PIPELINE_ID.json
         - export PLUGIN_VERSION=$(grep -nr 'EXTENSION_VERSION =' * | cut -f2 -d= | tr -d \" | tr -d \; | tr -d '[:space:]')
     script:
-        - "gsutil cp -Rn faraday-burp-v$(PLUGIN_VERSION).jar gs://faraday-build/burp/faraday-burp-latest.jar 2>&1 | check_not_skipped"
+        - gsutil cp -Rn faraday-burp-v$PLUGIN_VERSION.jar gs://faraday-build/burp/faraday-burp-latest.jar 2>&1 | check_not_skipped"
 
     dependencies:
         - build
