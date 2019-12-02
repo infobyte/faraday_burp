@@ -34,8 +34,7 @@ publish_files:
         - gcloud auth activate-service-account --key-file /tmp/$CI_PIPELINE_ID.json
         - export PLUGIN_VERSION=$(grep -nr 'EXTENSION_VERSION =' * | cut -f2 -d= | tr -d \" | tr -d \; | tr -d '[:space:]')
     script:
-        - ls build/libs
-        - gsutil cp -Rn faraday-burp-v$PLUGIN_VERSION.jar gs://faraday-build/burp/faraday-burp-latest.jar 2>&1 | check_not_skipped"
+        - gsutil cp -Rn build/libs/faraday-burp-v$PLUGIN_VERSION.jar gs://faraday-build/burp/faraday-burp-latest.jar 2>&1 | check_not_skipped"
 
     dependencies:
         - build
