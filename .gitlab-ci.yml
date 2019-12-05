@@ -28,7 +28,7 @@ build:
 publish_files:
     stage: publish
       only:
-      - master
+        - master
     image: 'google/cloud-sdk:latest'
     before_script:
         - check_not_skipped(){ grep -v 'Skipping'; }
