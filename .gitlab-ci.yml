@@ -27,7 +27,7 @@ build:
 
 publish_files:
     stage: publish
-      only:
+    only:
         - master
     image: 'google/cloud-sdk:latest'
     before_script:
