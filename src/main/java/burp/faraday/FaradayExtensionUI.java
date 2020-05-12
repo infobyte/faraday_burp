@@ -35,6 +35,8 @@ public class FaradayExtensionUI implements ITab {
     private JPasswordField passwordField;
     private JTextField secondFactorField;
     private JButton statusButton;
+    private JCheckBox ignoreSSLErrorsCheckbox;
+    private JLabel placeHolderLabel;
 
     private JLabel loginStatusLabel;
     private JLabel statusLabel;
@@ -136,7 +138,13 @@ public class FaradayExtensionUI implements ITab {
         statusButton = new JButton("Connect");
         statusButton.addActionListener(actionEvent -> onStatusPressed());
 
+        ignoreSSLErrorsCheckbox = new JCheckBox("Ignore SSL Errors");
+        ignoreSSLErrorsCheckbox.addItemListener(itemEvent -> extensionSettings.setIgnoreSSLErrors(itemEvent.getStateChange() == ItemEvent.SELECTED));
+        ignoreSSLErrorsCheckbox.setSelected(extensionSettings.ignoreSSLErrors());
+        JLabel placeHolderLabel = new JLabel("   ");
         loginStatusLabel = new JLabel("Not connected");
+        Font f = loginStatusLabel.getFont();
+        loginStatusLabel.setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 
         GroupLayout layout = new GroupLayout(loginPanel);
         layout.setAutoCreateGaps(true);
@@ -151,13 +159,18 @@ public class FaradayExtensionUI implements ITab {
                                 .addComponent(usernameLabel)
                                 .addComponent(passwordLabel)
                                 .addComponent(secondFactorLabel)
+                                .addComponent(placeHolderLabel)
+                                .addComponent(placeHolderLabel)
                                 .addComponent(statusButton)
+
                         )
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                 .addComponent(faradayUrlText, 256, 256, 256)
                                 .addComponent(usernameText, 256, 256, 256)
                                 .addComponent(passwordField, 256, 256, 256)
                                 .addComponent(secondFactorField, 256, 256, 256)
+                                .addComponent(ignoreSSLErrorsCheckbox, 256, 256, 256)
+                                .addComponent(placeHolderLabel)
                                 .addComponent(loginStatusLabel)
                         )
         );
@@ -179,6 +192,14 @@ public class FaradayExtensionUI implements ITab {
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                 .addComponent(secondFactorLabel)
                                 .addComponent(secondFactorField)
+                        )
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                .addComponent(placeHolderLabel)
+                                .addComponent(ignoreSSLErrorsCheckbox)
+                        )
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                .addComponent(placeHolderLabel)
+                                .addComponent(placeHolderLabel)
                         )
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                 .addComponent(statusButton)
@@ -211,6 +232,7 @@ public class FaradayExtensionUI implements ITab {
         workspaceCombo.setEnabled(false);
 
         workspaceCombo.addActionListener(actionEvent -> onWorkspaceSelected((Workspace) workspaceCombo.getSelectedItem()));
+
 
         GroupLayout layout = new GroupLayout(settingsPannel);
         layout.setAutoCreateGaps(true);
@@ -331,7 +353,7 @@ public class FaradayExtensionUI implements ITab {
         );
 
         layout.setVerticalGroup(layout.createSequentialGroup()
-                .addComponent(scrollPane, 406, 406, 406)
+                .addComponent(scrollPane, 486, 486, 486)
                 .addComponent(clearButton)
         );
 
@@ -449,7 +471,7 @@ public class FaradayExtensionUI implements ITab {
             return;
         }
 
-        faradayConnector.setBaseUrl(faradayUrl);
+        faradayConnector.setBaseUrl(faradayUrl, ignoreSSLErrorsCheckbox.isSelected());
 
         try {
             faradayConnector.validateFaradayURL();
@@ -647,6 +669,7 @@ public class FaradayExtensionUI implements ITab {
         });
     }
 
+
     @Override
     public String getTabCaption() {
         return "Faraday";
@@ -734,8 +757,8 @@ public class FaradayExtensionUI implements ITab {
     }
 
     /**
-     * Runs a Runnable instance in a background thread.
-     *
+     * Helper to run a runnable functions in a separated thread.
+     * Used to call Faraday apis and get a result from them.
      * @param runnable The runnable to run.
      */
     public static void runInThread(final Runnable runnable) {

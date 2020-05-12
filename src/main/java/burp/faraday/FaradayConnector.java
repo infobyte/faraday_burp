@@ -8,9 +8,9 @@ package burp.faraday;
 
 
 import burp.faraday.exceptions.*;
+import burp.faraday.exceptions.http.BadRequestException;
 import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
-import burp.faraday.exceptions.http.BadRequestException;
 import burp.faraday.models.Workspace;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
@@ -22,6 +22,7 @@ import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
 import com.github.zafarkhaja.semver.Version;
 import feign.*;
+import feign.Client;
 import feign.codec.Decoder;
 import feign.codec.ErrorDecoder;
 import feign.gson.GsonDecoder;
@@ -38,10 +39,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+
+import burp.faraday.http.FeignClientConfiguration;
+import java.net.URL;
+import java.net.MalformedURLException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+
 /**
  * This class provides the utilities necessary to connect to a Faraday Server and issue
  * authenticated requests to it.
  */
+
 public class FaradayConnector {
 
     /**
@@ -68,27 +77,59 @@ public class FaradayConnector {
      *
      * @param baseUrl Base URL of the Faraday Server.
      */
-    public void setBaseUrl(final String baseUrl) {
-
+    public void setBaseUrl(final String baseUrl, boolean ignoreSSLErrors) {
+        Client client;
         Decoder decoder = new GsonDecoder();
+        if (ignoreSSLErrors == true)
+        {
+          try{
+                String host = new URL(baseUrl).getHost();
+                client = FeignClientConfiguration.client(host);
+                // Build an instance of Feign to communicate with the REST API
+                faradayServerAPI = Feign.builder()
+                        .logLevel(Logger.Level.FULL)
+                        .client(client)
 
-        // Build an instance of Feign to communicate with the REST API
-        faradayServerAPI = Feign.builder()
-                .logLevel(Logger.Level.FULL)
+                        // Add the available cookies to every request
+                        .requestInterceptor(this::addCookies)
+                        .encoder(new GsonEncoder())
 
-                // Add the available cookies to every request
-                .requestInterceptor(this::addCookies)
-                .encoder(new GsonEncoder())
+                        // Add a custom error decoder to dispatch the correct exceptions.
+                        .errorDecoder(new FaradayErrorDecoder(decoder))
 
-                // Add a custom error decoder to dispatch the correct exceptions.
-                .errorDecoder(new FaradayErrorDecoder(decoder))
+                        // Intercept requests and call this method to simulate a browser session.
+                        .mapAndDecode((response, type) -> {
+                            handleCookies(response.headers());
+                            return response;
+                        }, decoder)
+                        .target(FaradayServerAPI.class, baseUrl);
 
-                // Intercept requests and call this method to simulate a browser session.
-                .mapAndDecode((response, type) -> {
-                    handleCookies(response.headers());
-                    return response;
-                }, decoder)
-                .target(FaradayServerAPI.class, baseUrl);
+            } catch (NoSuchAlgorithmException e){
+
+            }
+            catch (MalformedURLException e)
+            {
+
+            }catch (KeyManagementException e){
+
+            }
+        } else {
+            faradayServerAPI = Feign.builder()
+                    .logLevel(Logger.Level.FULL)
+                    // Add the available cookies to every request
+                    .requestInterceptor(this::addCookies)
+                    .encoder(new GsonEncoder())
+
+                    // Add a custom error decoder to dispatch the correct exceptions.
+                    .errorDecoder(new FaradayErrorDecoder(decoder))
+
+                    // Intercept requests and call this method to simulate a browser session.
+                    .mapAndDecode((response, type) -> {
+                        handleCookies(response.headers());
+                        return response;
+                    }, decoder)
+                    .target(FaradayServerAPI.class, baseUrl);
+        }
 
         this.baseUrl = baseUrl;
         this.urlIsValid = false;

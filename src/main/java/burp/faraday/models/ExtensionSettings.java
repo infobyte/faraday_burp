@@ -23,12 +23,14 @@ public class ExtensionSettings {
 
     private static final String DEFAULT_FARADAY_URL = "http://127.0.0.1:5985";
     private static final String DEFAULT_IMPORT_NEW_VULNS = "0";
+    private static final String DEFAULT_IGNORE_SSL_ERRORS = "0";
 
     private static final String KEY_FARADAY_URL = "faraday_url";
     private static final String KEY_USERNAME = "faraday_username";
     private static final String KEY_PASSWORD = "faraday_password";
     private static final String KEY_CURRENT_WORKSPACE = "faraday_current_workspace";
     private static final String KEY_IMPORT_NEW_VULNS = "faraday_import_new";
+    private static final String KEY_IGNORE_SSL_ERRORS = "faraday_ignore_ssl_errors";
 
 
     public ExtensionSettings(IBurpExtenderCallbacks callbacks) {
@@ -128,6 +130,25 @@ public class ExtensionSettings {
     }
 
     /**
+     * Fetches the setting on whether to ignore ssl errors.
+     *
+     * @return A boolean value with the current setting.
+     */
+    public boolean ignoreSSLErrors() {
+        return getSetting(KEY_IGNORE_SSL_ERRORS, DEFAULT_IGNORE_SSL_ERRORS).equals("1");
+    }
+
+    /**
+     * Sets the setting on ignore ssl errors.
+     *
+     * @param importNewVulns Whether to automatically import new vulns or not.
+     */
+    public void setIgnoreSSLErrors(boolean ignoreSSlErrors) {
+        callbacks.saveExtensionSetting(KEY_IGNORE_SSL_ERRORS, ignoreSSlErrors ? "1" : "0");
+    }
+
+
+    /**
      * Restores all settings to default values.
      */
     public void restore() {
@@ -136,6 +157,7 @@ public class ExtensionSettings {
         callbacks.saveExtensionSetting(KEY_PASSWORD, "");
         callbacks.saveExtensionSetting(KEY_CURRENT_WORKSPACE, "");
         callbacks.saveExtensionSetting(KEY_IMPORT_NEW_VULNS, "0");
+        callbacks.saveExtensionSetting(KEY_IGNORE_SSL_ERRORS, "0");
     }
 
     /**

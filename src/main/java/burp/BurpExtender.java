@@ -70,7 +70,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             log("Username: " + extensionSettings.getUsername());
             log("Import new Vulns: " + extensionSettings.importNewVulns());
 
-            faradayConnector.setBaseUrl(extensionSettings.getFaradayURL());
+            faradayConnector.setBaseUrl(extensionSettings.getFaradayURL(), extensionSettings.ignoreSSLErrors());
             try {
                 faradayConnector.validateFaradayURL();
             } catch (InvalidFaradayServerException e) {
