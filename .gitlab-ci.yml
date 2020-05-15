@@ -14,8 +14,6 @@ cache:
 
 build:
   stage: build
-  only:
-    - master
   script:
     - ./gradlew fatJar
   artifacts:
@@ -23,12 +21,13 @@ build:
     paths:
       - build/libs/*.jar
     expire_in: 1 week
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'  
+      when: always
 
 
 publish_files:
     stage: publish
-    only:
-        - master
     image: 'google/cloud-sdk:latest'
     before_script:
         - check_not_skipped(){ grep -v 'Skipping'; }
@@ -41,3 +40,6 @@ publish_files:
 
     dependencies:
         - build
+    rules:
+      - if: '$CI_COMMIT_BRANCH == "master"'  
+        when: always
