@@ -4,7 +4,7 @@
  * See the file 'LICENSE' for the license information
  */
 
-package burp.faraday;
+package burp.faraday.models;
 
 public class Workspace {
     private int id;

@@ -12,6 +12,7 @@ import burp.ITab;
 import burp.faraday.exceptions.*;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.FaradayConnectorStatus;
+import burp.faraday.models.Workspace;
 import burp.faraday.models.vulnerability.Vulnerability;
 
 import javax.swing.*;
@@ -19,9 +20,14 @@ import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.text.SimpleDateFormat;
 
+/**
+ * This class will be responsible of drawing the UI of the extension inside Burp
+ */
 public class FaradayExtensionUI implements ITab {
 
     private JTextField faradayUrlText;
@@ -29,9 +35,12 @@ public class FaradayExtensionUI implements ITab {
     private JPasswordField passwordField;
     private JTextField secondFactorField;
     private JButton statusButton;
-
+    private JCheckBox ignoreSSLErrorsCheckbox;
+    private JLabel placeHolderLabel;
 
     private JLabel loginStatusLabel;
+    private JLabel statusLabel;
+    private JTextArea messagesTextArea;
 
     private JPanel tab;
     private PrintWriter stdout;
@@ -42,6 +51,8 @@ public class FaradayExtensionUI implements ITab {
     private Component loginPanel;
     private Component settingsPannel;
     private Component otherSettingsPanel;
+    private Component statusPanel;
+    private Component messagesPanel;
 
     private JComboBox<Workspace> workspaceCombo;
 
@@ -59,26 +70,45 @@ public class FaradayExtensionUI implements ITab {
         layout.setAutoCreateGaps(true);
         layout.setAutoCreateContainerGaps(true);
 
+        // Initialize the three panels and arrange them in a vertical layout
         this.loginPanel = setupLoginPanel();
         this.settingsPannel = setupSettingsPanel();
         this.otherSettingsPanel = setupOtherSettingsPanel();
+        this.statusPanel = setupStatusPanel();
+        this.messagesPanel = setupMessagesPanel();
 
         layout.setHorizontalGroup(
-                layout.createParallelGroup()
-                        .addComponent(loginPanel)
-                        .addComponent(settingsPannel)
-                        .addComponent(otherSettingsPanel)
+                layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addComponent(loginPanel)
+                                .addComponent(settingsPannel)
+                                .addComponent(otherSettingsPanel)
+                                .addComponent(statusPanel)
+                        )
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addComponent(messagesPanel)
+
+                        )
+
+
         );
 
         layout.setVerticalGroup(
                 layout.createSequentialGroup()
-                        .addComponent(loginPanel)
-                        .addComponent(settingsPannel)
-                        .addComponent(otherSettingsPanel)
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addGroup(layout.createSequentialGroup()
+                                        .addComponent(loginPanel)
+                                        .addComponent(settingsPannel)
+                                        .addComponent(otherSettingsPanel)
+                                        .addComponent(statusPanel)
+                                )
+                                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                        .addComponent(messagesPanel)
+                                )
+                        )
         );
 
-        layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel, otherSettingsPanel);
-
+        layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel, otherSettingsPanel, statusPanel);
         disablePanel(settingsPannel);
 
     }
@@ -108,7 +138,13 @@ public class FaradayExtensionUI implements ITab {
         statusButton = new JButton("Connect");
         statusButton.addActionListener(actionEvent -> onStatusPressed());
 
+        ignoreSSLErrorsCheckbox = new JCheckBox("Ignore SSL Errors");
+        ignoreSSLErrorsCheckbox.addItemListener(itemEvent -> extensionSettings.setIgnoreSSLErrors(itemEvent.getStateChange() == ItemEvent.SELECTED));
+        ignoreSSLErrorsCheckbox.setSelected(extensionSettings.ignoreSSLErrors());
+        JLabel placeHolderLabel = new JLabel("   ");
         loginStatusLabel = new JLabel("Not connected");
+        Font f = loginStatusLabel.getFont();
+        loginStatusLabel.setFont(f.deriveFont(f.getStyle() | Font.BOLD));
 
         GroupLayout layout = new GroupLayout(loginPanel);
         layout.setAutoCreateGaps(true);
@@ -123,13 +159,18 @@ public class FaradayExtensionUI implements ITab {
                                 .addComponent(usernameLabel)
                                 .addComponent(passwordLabel)
                                 .addComponent(secondFactorLabel)
+                                .addComponent(placeHolderLabel)
+                                .addComponent(placeHolderLabel)
                                 .addComponent(statusButton)
+
                         )
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                 .addComponent(faradayUrlText, 256, 256, 256)
                                 .addComponent(usernameText, 256, 256, 256)
                                 .addComponent(passwordField, 256, 256, 256)
                                 .addComponent(secondFactorField, 256, 256, 256)
+                                .addComponent(ignoreSSLErrorsCheckbox, 256, 256, 256)
+                                .addComponent(placeHolderLabel)
                                 .addComponent(loginStatusLabel)
                         )
         );
@@ -153,6 +194,14 @@ public class FaradayExtensionUI implements ITab {
                                 .addComponent(secondFactorField)
                         )
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                .addComponent(placeHolderLabel)
+                                .addComponent(ignoreSSLErrorsCheckbox)
+                        )
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                .addComponent(placeHolderLabel)
+                                .addComponent(placeHolderLabel)
+                        )
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
                                 .addComponent(statusButton)
                                 .addComponent(loginStatusLabel)
                         )
@@ -169,19 +218,21 @@ public class FaradayExtensionUI implements ITab {
         JPanel settingsPannel = new JPanel();
         settingsPannel.setBorder(BorderFactory.createTitledBorder("Extension Settings"));
         JCheckBox inScopeCheckbox = new JCheckBox("Only in Burp scope");
+        JSeparator componentsSeparator = new JSeparator(SwingConstants.VERTICAL);
 
-        JCheckBox importNewVulnsCheckbox = new JCheckBox("Import new vulnerabilities automatically");
+        JCheckBox importNewVulnsCheckbox = new JCheckBox("Auto import new vulnerabilities");
         importNewVulnsCheckbox.addItemListener(itemEvent -> extensionSettings.setImportNewVulns(itemEvent.getStateChange() == ItemEvent.SELECTED));
         importNewVulnsCheckbox.setSelected(extensionSettings.importNewVulns());
 
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
-        importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected()));
+        importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected(), importCurrentVulnsButton));
 
-        JLabel workspaceLabel = new JLabel("Active workspace: ");
+        JLabel workspaceLabel = new JLabel("Active workspace:");
         workspaceCombo = new JComboBox<>();
         workspaceCombo.setEnabled(false);
 
         workspaceCombo.addActionListener(actionEvent -> onWorkspaceSelected((Workspace) workspaceCombo.getSelectedItem()));
+
 
         GroupLayout layout = new GroupLayout(settingsPannel);
         layout.setAutoCreateGaps(true);
@@ -190,29 +241,36 @@ public class FaradayExtensionUI implements ITab {
         settingsPannel.setLayout(layout);
 
         layout.setHorizontalGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup()
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addComponent(importNewVulnsCheckbox)
+                        .addComponent(inScopeCheckbox)
                         .addComponent(importCurrentVulnsButton)
-                        .addComponent(workspaceLabel)
+
                 )
                 .addGroup(layout.createParallelGroup()
-                        .addComponent(inScopeCheckbox)
+                    .addComponent(componentsSeparator)
+                )
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addComponent(workspaceLabel)
                         .addComponent(workspaceCombo)
                 )
         );
 
         layout.setVerticalGroup(layout.createSequentialGroup()
-                .addComponent(importNewVulnsCheckbox)
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
-                        .addComponent(importCurrentVulnsButton)
-                        .addComponent(inScopeCheckbox)
-                )
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                        .addComponent(importNewVulnsCheckbox)
                         .addComponent(workspaceLabel)
-                        .addComponent(workspaceCombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(componentsSeparator)
                 )
 
+                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                        .addComponent(inScopeCheckbox)
+                        .addComponent(workspaceCombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                )
+                .addComponent(importCurrentVulnsButton)
+
         );
+        layout.linkSize(SwingConstants.VERTICAL, workspaceLabel, componentsSeparator);
 
         return settingsPannel;
     }
@@ -244,6 +302,68 @@ public class FaradayExtensionUI implements ITab {
         return otherSettingsPanel;
     }
 
+    private Component setupStatusPanel() {
+        JPanel statusPanet = new JPanel();
+        statusPanet.setBorder(BorderFactory.createTitledBorder("Status"));
+
+        statusLabel = new JLabel("...");
+
+
+        GroupLayout layout = new GroupLayout(statusPanet);
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+
+        statusPanet.setLayout(layout);
+
+        layout.setHorizontalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup()
+                        .addComponent(statusLabel)
+                )
+        );
+
+        layout.setVerticalGroup(layout.createSequentialGroup()
+                .addComponent(statusLabel)
+        );
+
+
+        return statusPanet;
+    }
+
+    private Component setupMessagesPanel() {
+        JPanel messagesPanel = new JPanel();
+        messagesPanel.setBorder(BorderFactory.createTitledBorder("Messages"));
+        messagesTextArea = new JTextArea();
+
+        messagesTextArea.setEditable(false);
+        JScrollPane scrollPane = new JScrollPane(messagesTextArea);
+        JButton clearButton = new JButton("Clear messages");
+        clearButton.addActionListener(actionEvent -> messagesTextArea.setText(null));
+
+        GroupLayout layout = new GroupLayout(messagesPanel);
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+
+        messagesPanel.setLayout(layout);
+
+        layout.setHorizontalGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup()
+                        .addComponent(scrollPane, 500, 500, 500)
+                        .addComponent(clearButton)
+                )
+        );
+
+        layout.setVerticalGroup(layout.createSequentialGroup()
+                .addComponent(scrollPane, 486, 486, 486)
+                .addComponent(clearButton)
+        );
+
+
+        return messagesPanel;
+    }
+
+    /**
+     * State machine that depending on the status of the extension, will call the apropriate method.
+     */
     private void onStatusPressed() {
         switch (this.status) {
             case DISCONNECTED:
@@ -261,6 +381,9 @@ public class FaradayExtensionUI implements ITab {
         }
     }
 
+    /**
+     * Performs a login using the information filled in the fields.
+     */
     private void login() {
         String username = usernameText.getText().trim();
 
@@ -282,13 +405,13 @@ public class FaradayExtensionUI implements ITab {
 
             showErrorAlert("Invalid credentials.");
             passwordField.setText("");
-            setStatus("Invalid credentials");
+            setLoginStatus("Invalid credentials");
             return;
 
         } catch (SecondFactorRequiredException e) {
 
             secondFactorField.setEnabled(true);
-            setStatus("2FA Token required");
+            setLoginStatus("2FA Token required");
             statusButton.setText("Verify Token");
 
             usernameText.setEditable(false);
@@ -309,8 +432,12 @@ public class FaradayExtensionUI implements ITab {
 
         extensionSettings.setUsername(username);
         notifyLoggedIn(true);
+
     }
 
+    /**
+     * The server requested for a 2FA token.
+     */
     private void verifyToken() {
         String token = secondFactorField.getText().trim();
 
@@ -333,6 +460,9 @@ public class FaradayExtensionUI implements ITab {
         secondFactorField.setEditable(false);
     }
 
+    /**
+     * Connects tp the Faraday Server to validate the URL
+     */
     private void connect() {
         String faradayUrl = faradayUrlText.getText().trim();
 
@@ -341,7 +471,7 @@ public class FaradayExtensionUI implements ITab {
             return;
         }
 
-        faradayConnector.setBaseUrl(faradayUrl);
+        faradayConnector.setBaseUrl(faradayUrl, ignoreSSLErrorsCheckbox.isSelected());
 
         try {
             faradayConnector.validateFaradayURL();
@@ -358,10 +488,14 @@ public class FaradayExtensionUI implements ITab {
         statusButton.setText("Login");
 
         faradayUrlText.setEditable(false);
-        setStatus("Connected");
+        setLoginStatus("Connected");
+        log("Connected");
         this.status = FaradayConnectorStatus.CONNECTED;
     }
 
+    /**
+     * Logouts from the Faraday Server and clears any leftover state.
+     */
     private void logout() {
         faradayUrlText.setEditable(true);
         usernameText.setEditable(true);
@@ -372,9 +506,10 @@ public class FaradayExtensionUI implements ITab {
         secondFactorField.setEnabled(false);
         secondFactorField.setText("");
 
-        setStatus("Not connected");
+        setLoginStatus("Not connected");
 
         statusButton.setText("Connect");
+        log("Logout");
         this.status = FaradayConnectorStatus.DISCONNECTED;
 
         faradayConnector.logout();
@@ -385,17 +520,22 @@ public class FaradayExtensionUI implements ITab {
         disablePanel(settingsPannel);
     }
 
+    /**
+     * Notifies the UI that we have successfully logged in.
+     *
+     * @param showAlert Whether to show an alert or not.
+     */
     public void notifyLoggedIn(final boolean showAlert) {
+        log("Logged in");
         if (showAlert) {
+            setStatus("Logged in");
             JOptionPane.showMessageDialog(tab, "Login successful!", "Logged in", JOptionPane.INFORMATION_MESSAGE);
         }
-
         faradayUrlText.setEditable(false);
         usernameText.setEditable(false);
         passwordField.setEditable(false);
-
         statusButton.setText("Logout");
-        setStatus("Logged in");
+        setLoginStatus("Logged in");
         this.status = FaradayConnectorStatus.LOGGED_IN;
         loadWorkspaces();
         enablePanel(settingsPannel);
@@ -405,6 +545,9 @@ public class FaradayExtensionUI implements ITab {
         extensionSettings.setFaradayURL(faradayUrlText.getText());
     }
 
+    /**
+     * Notifies the UI that a 2FA token is needed.
+     */
     public void notify2FATokenNeeded() {
         usernameText.setEnabled(true);
         passwordField.setEnabled(true);
@@ -416,11 +559,15 @@ public class FaradayExtensionUI implements ITab {
         secondFactorField.setEnabled(true);
         secondFactorField.setEditable(true);
 
-        setStatus("2FA Token required");
+        setLoginStatus("2FA Token required");
         statusButton.setText("Verify Token");
+        log("Verify Token");
         this.status = FaradayConnectorStatus.NEEDS_2FA;
     }
 
+    /**
+     * Restores the default settings.
+     */
     private void restoreSettings() {
         logout();
         extensionSettings.restore();
@@ -428,6 +575,9 @@ public class FaradayExtensionUI implements ITab {
         faradayUrlText.setText(extensionSettings.getDefaultFaradayUrl());
     }
 
+    /**
+     * Loads the available workspaces from the Faraday Server and populates the combo box.
+     */
     private void loadWorkspaces() {
         String currentWorkspaceName = extensionSettings.getCurrentWorkspace();
 
@@ -450,6 +600,11 @@ public class FaradayExtensionUI implements ITab {
         }
     }
 
+    /**
+     * Callback for when a workspace is selected on the extension settings
+     *
+     * @param workspace The workspace that was selected.
+     */
     private void onWorkspaceSelected(Workspace workspace) {
         if (workspace == null) {
             return;
@@ -458,26 +613,62 @@ public class FaradayExtensionUI implements ITab {
         extensionSettings.setCurrentWorkspace(workspace.getName());
     }
 
-    private void onImportCurrentVulns(boolean onlyInScope) {
+    /**
+     * Callback for when the user wants to import all the vulnerabilities.
+     *
+     * @param onlyInScope Only import vulnerabilities in the burp scope
+     */
+    private void onImportCurrentVulns(boolean onlyInScope, JButton button) {
         runInThread(() -> {
+            int vuln_count;
+            int created_vulns = 0;
+            try {
 
-            List<IScanIssue> issues = Arrays.asList(callbacks.getScanIssues(null));
-
-            if (onlyInScope) {
-                issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
-            }
-
-            final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
-
-            final Workspace workspace = faradayConnector.getCurrentWorkspace();
-
-            for (Vulnerability vulnerability : vulnerabilities) {
-                if (!addVulnerability(vulnerability, workspace)) {
-                    break;
+                button.setEnabled(false);
+                IScanIssue[] scanIssuesArray = null;
+                scanIssuesArray = callbacks.getScanIssues(null);
+                if (scanIssuesArray == null){
+                        showErrorAlert("This option is only available for Burp Pro.");
+                        return ;
                 }
+
+                List<IScanIssue> issues = Arrays.asList(scanIssuesArray);
+                if (onlyInScope) {
+                    issues = issues.stream().filter(issue -> callbacks.isInScope(issue.getUrl())).collect(Collectors.toList());
+                }
+
+                final List<Vulnerability> vulnerabilities = issues.stream().map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
+                final Workspace workspace = faradayConnector.getCurrentWorkspace();
+                vuln_count = issues.size();
+                String message = "Sending " + vuln_count + " vulnerabilities";
+                log(message);
+                setStatus(message);
+                if (issues.size() > 0){
+
+                    for (Vulnerability vulnerability : vulnerabilities) {
+                        if (addVulnerability(vulnerability, workspace)) {
+                            log("Created Vulnerability");
+                            created_vulns ++;
+                        }
+                    }
+                    message = "Created " + created_vulns + " of " + vuln_count + " vulnerabilities";
+                    setStatus(message);
+                    showInfoAlert(message);
+                }else{
+                    message = "No vulnerabilities found.";
+                    showInfoAlert(message);
+                    setStatus(message);
+                }
+
+            } catch (Exception e) {
+                showInfoAlert("Error: " + e);
+                log("Error: " + e);
             }
+            button.setEnabled(true);
+
         });
     }
+
 
     @Override
     public String getTabCaption() {
@@ -489,19 +680,40 @@ public class FaradayExtensionUI implements ITab {
         return this.tab;
     }
 
-    private void setStatus(final String status) {
+    private void setLoginStatus(final String status) {
         loginStatusLabel.setText(status);
+        setStatus(status);
+    }
+
+    public void setStatus(final String status) {
+        statusLabel.setText(status);
     }
 
     private void log(final String msg) {
         this.stdout.println("[UI] " + msg);
+        addMessage(msg);
     }
 
+    public void addMessage(final String message){
+        Date date = new Date();
+        SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        messagesTextArea.append("[" + formatter.format(date) + "] " + message + "\n");
+    }
+    /**
+     * Disables a panel and all its subcomponents.
+     *
+     * @param panel The panel to disable.
+     */
     private void disablePanel(Component panel) {
         Arrays.stream(((Container) panel).getComponents()).forEach(component -> component.setEnabled(false));
         panel.setEnabled(false);
     }
 
+    /**
+     * Enables a panel and all its subcomponents.
+     *
+     * @param panel The panel to enable.
+     */
     private void enablePanel(Component panel) {
         Arrays.stream(((Container) panel).getComponents()).forEach(component -> component.setEnabled(true));
         panel.setEnabled(true);
@@ -515,6 +727,12 @@ public class FaradayExtensionUI implements ITab {
         showAlert(message, JOptionPane.INFORMATION_MESSAGE);
     }
 
+    /**
+     * Shows an alert in a thread safe manner.
+     *
+     * @param message The message to show.
+     * @param type    The alert type.
+     */
     private void showAlert(final String message, final int type) {
         log(message);
         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Info", type));
@@ -525,17 +743,24 @@ public class FaradayExtensionUI implements ITab {
         try {
             faradayConnector.addVulnerabilityToWorkspace(vulnerability, workspace);
         } catch (ObjectNotCreatedException e) {
-            log("Unable to create object tree");
-            showErrorAlert("There was an error creating the objects.");
+            log("Unable to create object tree: " + e);
             return false;
         } catch (InvalidFaradayServerException e) {
             showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
+            return false;
+        } catch (Exception e) {
+            log("Add Vuln Error: " + e);
             return false;
         }
 
         return true;
     }
 
+    /**
+     * Helper to run a runnable functions in a separated thread.
+     * Used to call Faraday apis and get a result from them.
+     * @param runnable The runnable to run.
+     */
     public static void runInThread(final Runnable runnable) {
         new SwingWorker<Void, Void>() {
 

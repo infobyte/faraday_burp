@@ -8,8 +8,10 @@ package burp.faraday;
 
 
 import burp.faraday.exceptions.*;
+import burp.faraday.exceptions.http.BadRequestException;
 import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
+import burp.faraday.models.Workspace;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
 import burp.faraday.models.responses.CreatedObjectEntity;
@@ -20,6 +22,7 @@ import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
 import com.github.zafarkhaja.semver.Version;
 import feign.*;
+import feign.Client;
 import feign.codec.Decoder;
 import feign.codec.ErrorDecoder;
 import feign.gson.GsonDecoder;
@@ -36,10 +39,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+
+import burp.faraday.http.FeignClientConfiguration;
+import java.net.URL;
+import java.net.MalformedURLException;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+
 /**
  * This class provides the utilities necessary to connect to a Faraday Server and issue
  * authenticated requests to it.
  */
+
 public class FaradayConnector {
 
     /**
@@ -66,25 +77,67 @@ public class FaradayConnector {
      *
      * @param baseUrl Base URL of the Faraday Server.
      */
-    public void setBaseUrl(final String baseUrl) {
-
+    public void setBaseUrl(final String baseUrl, boolean ignoreSSLErrors) {
+        Client client;
         Decoder decoder = new GsonDecoder();
+        if (ignoreSSLErrors == true)
+        {
+          try{
+                String host = new URL(baseUrl).getHost();
+                client = FeignClientConfiguration.client(host);
+                // Build an instance of Feign to communicate with the REST API
+                faradayServerAPI = Feign.builder()
+                        .logLevel(Logger.Level.FULL)
+                        .client(client)
 
-        faradayServerAPI = Feign.builder()
-                .logLevel(Logger.Level.FULL)
-                .requestInterceptor(this::addCookies)
-                .encoder(new GsonEncoder())
-                .errorDecoder(new FaradayErrorDecoder(decoder))
-                .mapAndDecode((response, type) -> {
-                    handleCookies(response.headers());
-                    return response;
-                }, decoder)
-                .target(FaradayServerAPI.class, baseUrl);
+                        // Add the available cookies to every request
+                        .requestInterceptor(this::addCookies)
+                        .encoder(new GsonEncoder())
+
+                        // Add a custom error decoder to dispatch the correct exceptions.
+                        .errorDecoder(new FaradayErrorDecoder(decoder))
+
+                        // Intercept requests and call this method to simulate a browser session.
+                        .mapAndDecode((response, type) -> {
+                            handleCookies(response.headers());
+                            return response;
+                        }, decoder)
+                        .target(FaradayServerAPI.class, baseUrl);
+
+            } catch (NoSuchAlgorithmException e){
+
+            }
+            catch (MalformedURLException e)
+            {
+
+            }catch (KeyManagementException e){
+
+            }
+        } else {
+            faradayServerAPI = Feign.builder()
+                    .logLevel(Logger.Level.FULL)
+                    // Add the available cookies to every request
+                    .requestInterceptor(this::addCookies)
+                    .encoder(new GsonEncoder())
+
+                    // Add a custom error decoder to dispatch the correct exceptions.
+                    .errorDecoder(new FaradayErrorDecoder(decoder))
+
+                    // Intercept requests and call this method to simulate a browser session.
+                    .mapAndDecode((response, type) -> {
+                        handleCookies(response.headers());
+                        return response;
+                    }, decoder)
+                    .target(FaradayServerAPI.class, baseUrl);
+        }
 
         this.baseUrl = baseUrl;
         this.urlIsValid = false;
     }
 
+    /**
+     * Add a header to the request template with the value of the stored cookies.
+     */
     private void addCookies(RequestTemplate template) {
         URI uri = URI.create(this.baseUrl);
         COOKIE_MANAGER.getCookieStore().get(uri).stream()
@@ -92,6 +145,9 @@ public class FaradayConnector {
                 .forEach(cookie -> template.header("Cookie", cookie));
     }
 
+    /**
+     * Sore the cookies that the server returned so that we can add them to future requests.
+     */
     private void handleCookies(Map<String, Collection<String>> headers) {
         // From Map<String, Collection<String>> to Map<String, List<String>>
         Map<String, List<String>> h = headers.entrySet().stream()
@@ -146,11 +202,12 @@ public class FaradayConnector {
         final Version serverVersion;
 
         if (serverInfo.getVersion().contains("-")) {
-
+            // The version has the license type, we should strip it.
             final String[] versionParts = serverInfo.getVersion().split("-");
 
             serverVersion = parseVersion(versionParts[1]);
         } else {
+            // The server is the White edition, no license type in the version.
             serverVersion = parseVersion(serverInfo.getVersion());
         }
 
@@ -184,6 +241,7 @@ public class FaradayConnector {
             throw new InvalidFaradayServerException();
         }
 
+        // Lets clear the cookies just in case.
         FaradayConnector.clearCookies();
 
         final User user = new User(username, password);
@@ -191,6 +249,9 @@ public class FaradayConnector {
         LoginStatus loginStatus;
         try {
             loginStatus = faradayServerAPI.login(user);
+        } catch (BadRequestException e) {
+            log("Invalid credentials.");
+            throw new InvalidCredentialsException();
         } catch (UnauthorizedException e) {
             log("Invalid credentials.");
             throw new InvalidCredentialsException();
@@ -318,6 +379,7 @@ public class FaradayConnector {
 
         try {
 
+            // First create the host and store the id.
             CreatedObjectEntity hostEntity;
             try {
                 hostEntity = faradayServerAPI.createHost(workspace.getName(), vulnerability.getHost());
@@ -325,6 +387,7 @@ public class FaradayConnector {
                 hostEntity = e.getExistingObject().getObject();
             }
 
+            // Instantiate the Service and set the parent ID
             final Service service = vulnerability.getService();
             service.setParent(hostEntity.getId());
 
@@ -334,17 +397,24 @@ public class FaradayConnector {
             } catch (ConflictException e) {
                 serviceEntity = e.getExistingObject().getObject();
             }
+
+            // Set the parent ID of the vulnerability, and issue the creation request.
             vulnerability.setParent(serviceEntity.getId());
-
-            final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace.getName(), vulnerability);
-
-            log("Created vulnerability " + vulnerabilityEntity.getId());
+            try {
+                final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace.getName(), vulnerability);
+            } catch (Exception e) {
+                throw new ObjectNotCreatedException();
+            }
+            //log("Created vulnerability " + vulnerabilityEntity.getId());
 
         } catch (UnauthorizedException e) {
             throw new ObjectNotCreatedException();
         }
     }
 
+    /**
+     * Decodes errors returned by the server and returns the correct exception to be raised.
+     */
     static class FaradayErrorDecoder implements ErrorDecoder {
 
         final Decoder decoder;
@@ -358,6 +428,8 @@ public class FaradayConnector {
         public Exception decode(String methodKey, Response response) {
             try {
                 switch (response.status()) {
+                    case 400:
+                        return new BadRequestException();
                     case 401:
                         return new UnauthorizedException();
                     case 409:
@@ -374,6 +446,9 @@ public class FaradayConnector {
         }
     }
 
+    /**
+     * Clears the cookies from the cookie jar to start a fresh session.
+     */
     static void clearCookies() {
         COOKIE_MANAGER.getCookieStore().removeAll();
     }
