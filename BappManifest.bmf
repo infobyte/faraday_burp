@@ -2,11 +2,11 @@ Uuid: 82f3cbaea46c4f158fd85bbccc90c31c
 ExtensionType: 1
 Name: Faraday
 RepoName: faraday
-ScreenVersion: 2.0
-SerialVersion: 7
+ScreenVersion: 2.5
+SerialVersion: 8
 MinPlatformVersion: 2
 ProOnly: True
 Author: Francisco Amato
 ShortDescription: Integrates Burp with the Faraday Integrated Penetration-Test Environment.
-EntryPoint: build/libs/burp-2.0.jar
+EntryPoint: build/libs/faraday-burp-v2.5.jar
 BuildCommand: ./gradlew fatJar

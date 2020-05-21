@@ -13,6 +13,7 @@ version = 'v2.5'
 archivesBaseName = 'faraday-burp'
 
 sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
