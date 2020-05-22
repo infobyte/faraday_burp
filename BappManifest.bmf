@@ -3,9 +3,9 @@ ExtensionType: 1
 Name: Faraday
 RepoName: faraday
 ScreenVersion: 2.5
-SerialVersion: 8
+SerialVersion: 9
 MinPlatformVersion: 2
-ProOnly: True
+ProOnly: False
 Author: Francisco Amato
 ShortDescription: Integrates Burp with the Faraday Integrated Penetration-Test Environment.
 EntryPoint: build/libs/faraday-burp-v2.5.jar
