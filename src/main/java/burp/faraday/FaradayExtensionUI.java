@@ -585,7 +585,7 @@ public class FaradayExtensionUI implements ITab {
 
         try {
             List<Workspace> workspaceList = faradayConnector.getWorkspaces();
-            workspaceList.forEach(workspaceCombo::addItem);
+            workspaceList.stream().filter(ws -> ws.isActive() == true).forEach(workspaceCombo::addItem);
 
             if (!currentWorkspaceName.isEmpty()) {
                 workspaceList.stream()
