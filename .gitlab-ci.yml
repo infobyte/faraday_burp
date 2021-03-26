@@ -1,5 +1,12 @@
 image: openjdk:9-jdk
 
+
+workflow:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+      when: never
+    - when: always
+
 stages:
   - build
   - publish
@@ -14,8 +21,6 @@ cache:
 
 build:
   stage: build
-  only:
-    - master
   script:
     - ./gradlew fatJar
   artifacts:
@@ -23,12 +28,13 @@ build:
     paths:
       - build/libs/*.jar
     expire_in: 1 week
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'  
+      when: on_success
 
 
 publish_files:
     stage: publish
-    only:
-        - master
     image: 'google/cloud-sdk:latest'
     before_script:
         - check_not_skipped(){ grep -v 'Skipping'; }
@@ -41,3 +47,6 @@ publish_files:
 
     dependencies:
         - build
+    rules:
+      - if: '$CI_COMMIT_BRANCH == "master"'  
+        when: on_success
