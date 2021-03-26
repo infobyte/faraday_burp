@@ -1,3 +1,8 @@
+# v2.6 - 2021/03/26
+
+* Don't show inactive workspaces
+* Send "Detail" field to "Data" field in faraday
+
 # v2.0 - 2019/02/01
 
 * Rewrote the extension using Java.
