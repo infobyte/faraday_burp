@@ -30,7 +30,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
 
     private static final String EXTENSION_VERSION = "2.5";
 
-    private static final String EXTENSION_NAME = "Faraday plugin for Burp (v: " + EXTENSION_VERSION+")";
+    private static final String EXTENSION_NAME = "Faraday plugin for Burp (v: " + EXTENSION_VERSION + ")";
 
     private IBurpExtenderCallbacks callbacks;
     private PrintWriter stdout;
