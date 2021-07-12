@@ -1,3 +1,7 @@
+# v2.7 - 2021/07/21
+
+* Use Faraday api version 3
+
 # v2.6 - 2021/03/26
 
 * Don't show inactive workspaces

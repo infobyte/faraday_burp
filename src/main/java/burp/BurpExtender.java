@@ -28,7 +28,7 @@ import static burp.IContextMenuInvocation.*;
 
 public class BurpExtender implements IBurpExtender, IExtensionStateListener, IScannerListener, IContextMenuFactory {
 
-    private static final String EXTENSION_VERSION = "2.6";
+    private static final String EXTENSION_VERSION = "2.7";
 
     private static final String EXTENSION_NAME = "Faraday plugin for Burp (v: " + EXTENSION_VERSION + ")";
 
