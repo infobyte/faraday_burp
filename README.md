@@ -15,7 +15,7 @@ You can get the precompiled extension over here:
 [Official Burp Extension Documentation](https://support.faradaysec.com/portal/kb/articles/https-support-faradaysec-com-portal-kb-articles-burp-plugin)
 
 ## Compatibility
-This extension is supported in Burp's Commununity & Pro editions
+This extension is supported in Burp's Community & Pro editions
 
 ## Building
 

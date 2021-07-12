@@ -32,7 +32,7 @@ public interface FaradayServerAPI {
      *
      * @return An instance of {@link ServerInfo} describing the Faraday Server
      */
-    @RequestLine("GET /_api/v2/info")
+    @RequestLine("GET /_api/v3/info")
     @Headers("Content-Type: application/json")
     ServerInfo getInfo();
 
@@ -78,7 +78,7 @@ public interface FaradayServerAPI {
      *
      * @throws UnauthorizedException If the session has expired.
      */
-    @RequestLine("GET /_api/v2/ws/")
+    @RequestLine("GET /_api/v3/ws")
     @Headers("Content-Type: application/json")
     List<Workspace> getWorkspaces() throws UnauthorizedException;
 
@@ -93,7 +93,7 @@ public interface FaradayServerAPI {
      * @throws UnauthorizedException If the session has expired.
      * @throws ConflictException     If there was a conflict when creating the object.
      */
-    @RequestLine("POST /_api/v2/ws/{workspace}/hosts/")
+    @RequestLine("POST /_api/v3/ws/{workspace}/hosts")
     @Headers("Content-Type: application/json")
     CreatedObjectEntity createHost(@Param("workspace") String workspace, Host host) throws UnauthorizedException, ConflictException;
 
@@ -108,7 +108,7 @@ public interface FaradayServerAPI {
      * @throws UnauthorizedException If the session has expired.
      * @throws ConflictException     If there was a conflict when creating the object.
      */
-    @RequestLine("POST /_api/v2/ws/{workspace}/services/")
+    @RequestLine("POST /_api/v3/ws/{workspace}/services")
     @Headers("Content-Type: application/json")
     CreatedObjectEntity createService(@Param("workspace") String workspace, Service service) throws UnauthorizedException, ConflictException;
 
@@ -122,7 +122,7 @@ public interface FaradayServerAPI {
      *
      * @throws UnauthorizedException If the session has expired.
      */
-    @RequestLine("POST /_api/v2/ws/{workspace}/vulns/")
+    @RequestLine("POST /_api/v3/ws/{workspace}/vulns")
     @Headers("Content-Type: application/json")
     CreatedObjectEntity createVulnerability(@Param("workspace") String workspace, Vulnerability vulnerability) throws UnauthorizedException;
 }
