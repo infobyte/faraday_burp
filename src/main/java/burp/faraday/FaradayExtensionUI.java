@@ -227,6 +227,9 @@ public class FaradayExtensionUI implements ITab {
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
         importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected(), importCurrentVulnsButton));
 
+        JButton refreshWorkspaces = new JButton("Refresh active workspace's list");
+        refreshWorkspaces.addActionListener(actionEvent -> loadWorkspaces());
+
         JLabel workspaceLabel = new JLabel("Active workspace:");
         workspaceCombo = new JComboBox<>();
         workspaceCombo.setEnabled(false);
@@ -245,6 +248,7 @@ public class FaradayExtensionUI implements ITab {
                         .addComponent(importNewVulnsCheckbox)
                         .addComponent(inScopeCheckbox)
                         .addComponent(importCurrentVulnsButton)
+                        .addComponent(refreshWorkspaces)
 
                 )
                 .addGroup(layout.createParallelGroup()
@@ -268,6 +272,7 @@ public class FaradayExtensionUI implements ITab {
                         .addComponent(workspaceCombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                 )
                 .addComponent(importCurrentVulnsButton)
+                .addComponent(refreshWorkspaces)
 
         );
         layout.linkSize(SwingConstants.VERTICAL, workspaceLabel, componentsSeparator);

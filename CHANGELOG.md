@@ -1,3 +1,7 @@
+# v2.8 - 2022/07/06
+
+* Add refresh workspace bottom
+
 # v2.7 - 2021/07/21
 
 * Use Faraday api version 3
