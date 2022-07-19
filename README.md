@@ -22,6 +22,10 @@ This extension is supported in Burp's Community & Pro editions
 In the root of the project, run:
 
     $ ./gradlew fatJar
+
+with docker
+
+    $ docker run --rm -it -v $(pwd):/src -w /src openjdk:9-jdk  ./gradlew fatJar
     
 This will download the necessary dependencies and build a fat `.jar` that is ready to be loaded in Burp.
 
