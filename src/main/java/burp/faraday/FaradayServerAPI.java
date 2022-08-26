@@ -18,6 +18,7 @@ import burp.faraday.models.responses.ServerInfo;
 import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Vulnerability;
+import burp.faraday.models.vulnerability.Command;
 import feign.Headers;
 import feign.Param;
 import feign.RequestLine;
@@ -81,6 +82,21 @@ public interface FaradayServerAPI {
     @RequestLine("GET /_api/v3/ws")
     @Headers("Content-Type: application/json")
     List<Workspace> getWorkspaces() throws UnauthorizedException;
+
+    /**
+     * Creates a command in the specified workspace.
+     *
+     * @param workspace The workspace in which the Host should be created.
+     * @param command The command to create
+     *
+     * @return A {@link CreatedObjectEntity} describing the newly created object.
+     *
+     * @throws UnauthorizedException If the session has expired.
+     * @throws ConflictException     If there was a conflict when creating the object.
+     */
+    @RequestLine("POST /_api/v3/ws/{workspace}/commands")
+    @Headers("Content-Type: application/json")
+    CreatedObjectEntity createCommand(@Param("workspace") String workspace, Command command) throws UnauthorizedException, ConflictException;
 
     /**
      * Creates a host in the specified workspace.
