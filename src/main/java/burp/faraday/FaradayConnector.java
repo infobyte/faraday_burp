@@ -19,7 +19,9 @@ import burp.faraday.models.responses.ExistingObjectEntity;
 import burp.faraday.models.responses.LoginStatus;
 import burp.faraday.models.responses.ServerInfo;
 import burp.faraday.models.vulnerability.Service;
+import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Vulnerability;
+import burp.faraday.models.vulnerability.Command;
 import com.github.zafarkhaja.semver.Version;
 import feign.*;
 import feign.Client;
@@ -369,6 +371,33 @@ public class FaradayConnector {
      *
      * @param vulnerability The vulnerability to create.
      */
+    public int addCommandToWorkspace(final Command command, final Workspace workspace)
+            throws InvalidFaradayServerException,
+            ObjectNotCreatedException {
+        if (!this.urlIsValid) {
+            throw new InvalidFaradayServerException();
+        }
+        try {
+
+            // First create the host and store the id.
+            try {
+                return faradayServerAPI.createCommand(workspace.getName(), command).getId();
+            } catch (ConflictException e) {
+                throw new ObjectNotCreatedException();
+            }
+        } catch (UnauthorizedException e) {
+            throw new ObjectNotCreatedException();
+        } catch (Exception e)
+        {
+            throw new ObjectNotCreatedException();
+        }
+    }
+
+    /**
+     * Adds a vulnerability to the current workspace.
+     *
+     * @param vulnerability The vulnerability to create.
+     */
     void addVulnerabilityToWorkspace(final Vulnerability vulnerability, final Workspace workspace)
             throws InvalidFaradayServerException,
             ObjectNotCreatedException {
@@ -382,7 +411,9 @@ public class FaradayConnector {
             // First create the host and store the id.
             CreatedObjectEntity hostEntity;
             try {
-                hostEntity = faradayServerAPI.createHost(workspace.getName(), vulnerability.getHost());
+                Host host = vulnerability.getHost();
+                host.setCommandId(vulnerability.getCommandId());
+                hostEntity = faradayServerAPI.createHost(workspace.getName(), host);
             } catch (ConflictException e) {
                 hostEntity = e.getExistingObject().getObject();
             }
@@ -390,7 +421,7 @@ public class FaradayConnector {
             // Instantiate the Service and set the parent ID
             final Service service = vulnerability.getService();
             service.setParent(hostEntity.getId());
-
+            service.setCommandId(vulnerability.getCommandId());
             CreatedObjectEntity serviceEntity;
             try {
                 serviceEntity = faradayServerAPI.createService(workspace.getName(), service);
