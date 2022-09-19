@@ -1,11 +1,8 @@
-# v2.9 - 2022/08/16
-
-* Fix website field
-* Now the host,services and vulns create have a command associated
-
-# v2.8 - 2022/07/06
+# v2.8 - 2022/09/19
 
 * Add refresh workspace bottom
+* Fix website field
+* Now the host,services and vulns create have a command associated
 
 # v2.7 - 2021/07/21
 
