@@ -14,6 +14,7 @@ import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.FaradayConnectorStatus;
 import burp.faraday.models.Workspace;
 import burp.faraday.models.vulnerability.Vulnerability;
+import burp.faraday.models.vulnerability.Command;
 
 import javax.swing.*;
 import java.awt.*;
@@ -24,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 
 /**
  * This class will be responsible of drawing the UI of the extension inside Burp
@@ -53,12 +55,13 @@ public class FaradayExtensionUI implements ITab {
     private Component otherSettingsPanel;
     private Component statusPanel;
     private Component messagesPanel;
+    private HashMap<Integer, Integer> commandsMap = null;
 
     private JComboBox<Workspace> workspaceCombo;
 
     private FaradayConnectorStatus status = FaradayConnectorStatus.DISCONNECTED;
 
-    public FaradayExtensionUI(PrintWriter stdout, IBurpExtenderCallbacks callbacks, FaradayConnector faradayConnector, ExtensionSettings extensionSettings) {
+    public FaradayExtensionUI(PrintWriter stdout, IBurpExtenderCallbacks callbacks, FaradayConnector faradayConnector, ExtensionSettings extensionSettings, HashMap<Integer, Integer> commandsMap) {
         this.stdout = stdout;
         this.callbacks = callbacks;
         this.faradayConnector = faradayConnector;
@@ -110,7 +113,7 @@ public class FaradayExtensionUI implements ITab {
 
         layout.linkSize(SwingConstants.HORIZONTAL, loginPanel, settingsPannel, otherSettingsPanel, statusPanel);
         disablePanel(settingsPannel);
-
+        this.commandsMap = commandsMap;
     }
 
     private Component setupLoginPanel() {
@@ -227,6 +230,9 @@ public class FaradayExtensionUI implements ITab {
         JButton importCurrentVulnsButton = new JButton("Import current vulnerabilities");
         importCurrentVulnsButton.addActionListener(actionEvent -> onImportCurrentVulns(inScopeCheckbox.isSelected(), importCurrentVulnsButton));
 
+        JButton refreshWorkspaces = new JButton("Refresh active workspace's list");
+        refreshWorkspaces.addActionListener(actionEvent -> loadWorkspaces());
+
         JLabel workspaceLabel = new JLabel("Active workspace:");
         workspaceCombo = new JComboBox<>();
         workspaceCombo.setEnabled(false);
@@ -245,6 +251,7 @@ public class FaradayExtensionUI implements ITab {
                         .addComponent(importNewVulnsCheckbox)
                         .addComponent(inScopeCheckbox)
                         .addComponent(importCurrentVulnsButton)
+                        .addComponent(refreshWorkspaces)
 
                 )
                 .addGroup(layout.createParallelGroup()
@@ -268,6 +275,7 @@ public class FaradayExtensionUI implements ITab {
                         .addComponent(workspaceCombo, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                 )
                 .addComponent(importCurrentVulnsButton)
+                .addComponent(refreshWorkspaces)
 
         );
         layout.linkSize(SwingConstants.VERTICAL, workspaceLabel, componentsSeparator);
@@ -643,9 +651,20 @@ public class FaradayExtensionUI implements ITab {
                 String message = "Sending " + vuln_count + " vulnerabilities";
                 log(message);
                 setStatus(message);
+                int commandId;
+                if (!commandsMap.containsKey(workspace.getId())){
+                    Command command = new Command();
+                    command.setCommand("Vulns from issues");
+                    commandId = addCommand(command, workspace);
+                    commandsMap.put(workspace.getId(), commandId);
+                }
+                else {
+                    commandId = commandsMap.get(workspace.getId());
+                }
                 if (issues.size() > 0){
 
                     for (Vulnerability vulnerability : vulnerabilities) {
+                        vulnerability.setCommandId(commandId);
                         if (addVulnerability(vulnerability, workspace)) {
                             log("Created Vulnerability");
                             created_vulns ++;
@@ -736,6 +755,24 @@ public class FaradayExtensionUI implements ITab {
     private void showAlert(final String message, final int type) {
         log(message);
         SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(tab, message, "Info", type));
+    }
+
+    public int addCommand(final Command command, final Workspace workspace) {
+        int commandId;
+        try {
+             commandId = faradayConnector.addCommandToWorkspace(command, workspace);
+        } catch (ObjectNotCreatedException e) {
+            log("Unable to create object tree: " + e);
+            return 0;
+        } catch (InvalidFaradayServerException e) {
+            showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
+            return 0;
+        } catch (Exception e) {
+            log("Add Command Error: " + e);
+            return 0;
+        }
+
+        return commandId;
     }
 
     public boolean addVulnerability(final Vulnerability vulnerability, final Workspace workspace) {

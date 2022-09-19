@@ -16,13 +16,17 @@ import burp.faraday.exceptions.SecondFactorRequiredException;
 import burp.faraday.exceptions.ServerTooOldException;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.vulnerability.Vulnerability;
+import burp.faraday.models.vulnerability.Command;
+import burp.faraday.models.responses.CreatedObjectEntity;
 
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.HashMap;
 
 import static burp.IContextMenuInvocation.*;
 
@@ -34,6 +38,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
 
     private IBurpExtenderCallbacks callbacks;
     private PrintWriter stdout;
+    private HashMap<Integer, Integer> commandsMap = new HashMap<>();
 
 
     private IExtensionHelpers helpers;
@@ -59,7 +64,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         stdout = new PrintWriter(callbacks.getStdout(), true);
         this.faradayConnector = new FaradayConnector(stdout);
         this.extensionSettings = new ExtensionSettings(callbacks);
-        this.faradayExtensionUI = new FaradayExtensionUI(stdout, callbacks, faradayConnector, extensionSettings);
+        this.faradayExtensionUI = new FaradayExtensionUI(stdout, callbacks, faradayConnector, extensionSettings, commandsMap=commandsMap);
 
         if (!extensionSettings.getUsername().isEmpty() && !extensionSettings.getPassword().isEmpty()) {
 
@@ -164,14 +169,25 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
 
         // Run the import on a separate thread
         FaradayExtensionUI.runInThread(() -> {
+            final Workspace workspace = faradayConnector.getCurrentWorkspace();
+            int commandId;
+            if (!commandsMap.containsKey(workspace.getId())){
+                Command command = new Command();
+                command.setCommand("Vulns from issues");
+                commandId = faradayExtensionUI.addCommand(command, workspace);
+                commandsMap.put(workspace.getId(), commandId);
+            }
+            else {
+                commandId = commandsMap.get(workspace.getId());
+            }
             final List<Vulnerability> vulnerabilities = Arrays.stream(issues).map(VulnerabilityMapper::fromIssue).collect(Collectors.toList());
             int vuln_count = vulnerabilities.size();
             int created_vulns = 0;
-            final Workspace workspace = faradayConnector.getCurrentWorkspace();
             this.faradayExtensionUI.setStatus("Sending " + vuln_count + " vulnerabilities...");
             log("Sending " + vuln_count + " vulnerabilities...");
             this.faradayExtensionUI.addMessage("Sending " + vuln_count + " vulnerabilities...");
             for (Vulnerability vulnerability : vulnerabilities) {
+                vulnerability.setCommandId(commandId);
                 if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
                     this.faradayExtensionUI.addMessage("Created Vulnerability");
                     created_vulns ++;
@@ -185,6 +201,7 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             }
 
             this.faradayExtensionUI.setStatus(message);
+
         });
     }
 
@@ -204,10 +221,21 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             int vuln_count = vulnerabilities.size();
             int created_vulns = 0;
             final Workspace workspace = faradayConnector.getCurrentWorkspace();
+            int commandId;
+            if (!commandsMap.containsKey(workspace.getId())){
+                Command command = new Command();
+                command.setCommand("Vulns from issues");
+                commandId = faradayExtensionUI.addCommand(command, workspace);
+                commandsMap.put(workspace.getId(), commandId);
+            }
+            else {
+                commandId = commandsMap.get(workspace.getId());
+            }
             this.faradayExtensionUI.setStatus("Sending " + vuln_count + " requests..." );
             log("Sending " + vuln_count + " requests...");
             this.faradayExtensionUI.addMessage("Sending " + vuln_count + " requests...");
             for (Vulnerability vulnerability : vulnerabilities) {
+                vulnerability.setCommandId(commandId);
                 if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
                     this.faradayExtensionUI.addMessage("Created Request");
                     created_vulns ++;
@@ -244,6 +272,17 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
         FaradayExtensionUI.runInThread(() -> {
             final Workspace workspace = faradayConnector.getCurrentWorkspace();
             final Vulnerability vulnerability = VulnerabilityMapper.fromIssue(issue);
+            int commandId;
+            if (!commandsMap.containsKey(workspace.getId())){
+                Command command = new Command();
+                command.setCommand("Vulns from issues");
+                commandId = faradayExtensionUI.addCommand(command, workspace);
+                commandsMap.put(workspace.getId(), commandId);
+            }
+            else {
+                commandId = commandsMap.get(workspace.getId());
+            }
+            vulnerability.setCommandId(commandId);
             faradayExtensionUI.addVulnerability(vulnerability, workspace);
         });
     }

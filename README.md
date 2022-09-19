@@ -20,9 +20,13 @@ This extension is supported in Burp's Community & Pro editions
 ## Building
 
 In the root of the project, run:
-
-    $ ./gradlew fatJar
-    
+```shell
+$ ./gradlew fatJar
+```
+with docker
+```shell
+$ docker run --rm -it -v $(pwd):/src -w /src openjdk:9-jdk  ./gradlew fatJar
+```  
 This will download the necessary dependencies and build a fat `.jar` that is ready to be loaded in Burp.
 
 You can find the file built under `build/libs/`
