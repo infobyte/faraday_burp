@@ -36,6 +36,7 @@ public class FaradayExtensionUI implements ITab {
     private JTextField usernameText;
     private JPasswordField passwordField;
     private JTextField secondFactorField;
+    private JTextField newWorkspaceText;
     private JButton statusButton;
     private JCheckBox ignoreSSLErrorsCheckbox;
     private JLabel placeHolderLabel;
@@ -54,6 +55,7 @@ public class FaradayExtensionUI implements ITab {
     private Component settingsPannel;
     private Component otherSettingsPanel;
     private Component statusPanel;
+    private Component newWorkspacePanel;
     private Component messagesPanel;
     private HashMap<Integer, Integer> commandsMap = null;
 
@@ -78,6 +80,7 @@ public class FaradayExtensionUI implements ITab {
         this.settingsPannel = setupSettingsPanel();
         this.otherSettingsPanel = setupOtherSettingsPanel();
         this.statusPanel = setupStatusPanel();
+        this.newWorkspacePanel  = setupNewWorkspacePanel();
         this.messagesPanel = setupMessagesPanel();
 
         layout.setHorizontalGroup(
@@ -87,6 +90,7 @@ public class FaradayExtensionUI implements ITab {
                                 .addComponent(settingsPannel)
                                 .addComponent(otherSettingsPanel)
                                 .addComponent(statusPanel)
+                                .addComponent(newWorkspacePanel)
                         )
                         .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                                 .addComponent(messagesPanel)
@@ -102,6 +106,7 @@ public class FaradayExtensionUI implements ITab {
                                 .addGroup(layout.createSequentialGroup()
                                         .addComponent(loginPanel)
                                         .addComponent(settingsPannel)
+                                        .addComponent(newWorkspacePanel)
                                         .addComponent(otherSettingsPanel)
                                         .addComponent(statusPanel)
                                 )
@@ -252,10 +257,9 @@ public class FaradayExtensionUI implements ITab {
                         .addComponent(inScopeCheckbox)
                         .addComponent(importCurrentVulnsButton)
                         .addComponent(refreshWorkspaces)
-
                 )
                 .addGroup(layout.createParallelGroup()
-                    .addComponent(componentsSeparator)
+                        .addComponent(componentsSeparator)
                 )
                 .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
                         .addComponent(workspaceLabel)
@@ -310,12 +314,54 @@ public class FaradayExtensionUI implements ITab {
         return otherSettingsPanel;
     }
 
+    private Component setupNewWorkspacePanel() {
+        JPanel newWorkspacePanet = new JPanel();
+        newWorkspacePanet.setBorder(BorderFactory.createTitledBorder("New Workspace"));
+
+        JLabel newWorkspaceLabel = new JLabel("Name: ");
+        newWorkspaceText = new JTextField();
+        JButton createNewWorkspaceButton = new JButton("Create");
+        createNewWorkspaceButton.addActionListener(actionEvent -> createWorkspace());
+
+        GroupLayout layout = new GroupLayout(newWorkspacePanet);
+        layout.setAutoCreateGaps(true);
+        layout.setAutoCreateContainerGaps(true);
+
+        newWorkspacePanet.setLayout(layout);
+
+        layout.setHorizontalGroup(
+                layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                .addComponent(newWorkspaceLabel)
+                        )
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                .addComponent(newWorkspaceText, 256, 256, 256)
+                        )
+                        .addComponent(createNewWorkspaceButton)
+
+        );
+
+        layout.setVerticalGroup(
+                layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(GroupLayout.Alignment.CENTER)
+                                .addComponent(newWorkspaceLabel)
+                                .addComponent(newWorkspaceText)
+                                .addComponent(createNewWorkspaceButton)
+                        )
+        );
+
+        layout.linkSize(SwingConstants.VERTICAL, newWorkspaceText);
+        layout.linkSize(SwingConstants.HORIZONTAL, newWorkspaceText);
+
+
+        return newWorkspacePanet;
+    }
+
     private Component setupStatusPanel() {
         JPanel statusPanet = new JPanel();
         statusPanet.setBorder(BorderFactory.createTitledBorder("Status"));
 
         statusLabel = new JLabel("...");
-
 
         GroupLayout layout = new GroupLayout(statusPanet);
         layout.setAutoCreateGaps(true);
@@ -605,6 +651,26 @@ public class FaradayExtensionUI implements ITab {
 
         } catch (CookieExpiredException | InvalidFaradayServerException e) {
             log("Could not fetch workspaces: " + e);
+        }
+    }
+
+    /**
+     * Create a new workspace
+     @param workspace The name of the new workspace.
+     */
+    private void createWorkspace() {
+        String workspaceName = newWorkspaceText.getText().trim();
+        newWorkspaceText.setText("");
+        try {
+            Workspace newWorkspace = faradayConnector.createWorkspace(workspaceName);
+            extensionSettings.setCurrentWorkspace(workspaceName);
+            loadWorkspaces();
+            log("New workspace created: " + workspaceName);
+        } catch (InvalidFaradayServerException e) {
+            log("Could not create workspace: " + e);
+        }catch (ObjectNotCreatedException e) {
+            log("Unable to create object workspace: " + e);
+            return;
         }
     }
 

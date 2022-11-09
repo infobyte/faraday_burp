@@ -367,6 +367,34 @@ public class FaradayConnector {
     }
 
     /**
+     * Create a new workspace.
+     *
+     * @param name The workspace to name.
+     */
+    public Workspace createWorkspace(final String name)
+            throws InvalidFaradayServerException,
+            ObjectNotCreatedException {
+        if (!this.urlIsValid) {
+            throw new InvalidFaradayServerException();
+        }
+        try {
+            try {
+                Workspace ws = new Workspace();
+                ws.setName(name);
+                ws.setActive(true);
+                return faradayServerAPI.createWorkspace(ws);
+            } catch (ConflictException e) {
+                throw new ObjectNotCreatedException();
+            }
+        } catch (UnauthorizedException e) {
+            throw new ObjectNotCreatedException();
+        } catch (Exception e)
+        {
+            throw new ObjectNotCreatedException();
+        }
+    }
+
+    /**
      * Adds a vulnerability to the current workspace.
      *
      * @param vulnerability The vulnerability to create.

@@ -84,6 +84,17 @@ public interface FaradayServerAPI {
     List<Workspace> getWorkspaces() throws UnauthorizedException;
 
     /**
+     * Create a workspace.
+     *
+     * @return A Workspace Object
+     *
+     * @throws UnauthorizedException If the session has expired.
+     */
+    @RequestLine("POST /_api/v3/ws")
+    @Headers("Content-Type: application/json")
+    Workspace createWorkspace(Workspace workspace) throws UnauthorizedException, ConflictException;
+
+    /**
      * Creates a command in the specified workspace.
      *
      * @param workspace The workspace in which the Host should be created.
