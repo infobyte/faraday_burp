@@ -1,4 +1,4 @@
-# v2.8.1 - 2022/10/28
+# v2.9 - 2022/12/15
 
 * Add create workspace button
 
