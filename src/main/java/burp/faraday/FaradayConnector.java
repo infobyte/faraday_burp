@@ -12,6 +12,7 @@ import burp.faraday.exceptions.http.BadRequestException;
 import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
 import burp.faraday.models.Workspace;
+import burp.faraday.models.WorkspaceWrapper;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
 import burp.faraday.models.responses.CreatedObjectEntity;
@@ -329,8 +330,11 @@ public class FaradayConnector {
      *
      * @throws InvalidFaradayServerException If the Faraday Server URL is not valid, or an error occurred while sending the request.
      */
-    List<Workspace> getWorkspaces() throws InvalidFaradayServerException, CookieExpiredException {
+//    List<Workspace> getWorkspaces() throws InvalidFaradayServerException, CookieExpiredException {
+     WorkspaceWrapper getWorkspaces() throws InvalidFaradayServerException, CookieExpiredException {
+        log("Fetching workspaces before checking session.");
         if (!this.urlIsValid) {
+            log("Faraday server URL is not valid.");
             throw new InvalidFaradayServerException();
         }
 
@@ -339,6 +343,7 @@ public class FaradayConnector {
         try {
             return faradayServerAPI.getWorkspaces();
         } catch (UnauthorizedException e) {
+            log("Exception!");
             throw new CookieExpiredException();
         }
     }
