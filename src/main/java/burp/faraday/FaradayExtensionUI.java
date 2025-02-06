@@ -13,6 +13,7 @@ import burp.faraday.exceptions.*;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.FaradayConnectorStatus;
 import burp.faraday.models.Workspace;
+import burp.faraday.models.WorkspaceWrapper;
 import burp.faraday.models.vulnerability.Vulnerability;
 import burp.faraday.models.vulnerability.Command;
 
@@ -634,24 +635,29 @@ public class FaradayExtensionUI implements ITab {
      */
     private void loadWorkspaces() {
         String currentWorkspaceName = extensionSettings.getCurrentWorkspace();
-
+        log("Loading workspaces!");
         workspaceCombo.removeAllItems();
-
+        log("Clearing workspace combo");
         try {
-            List<Workspace> workspaceList = faradayConnector.getWorkspaces();
-            workspaceList.stream().filter(ws -> ws.isActive() == true).forEach(workspaceCombo::addItem);
-
-            if (!currentWorkspaceName.isEmpty()) {
-                workspaceList.stream()
-                        .filter(workspace -> workspace.getName().equals(currentWorkspaceName))
-                        .findFirst()
-                        .ifPresent(workspace -> workspaceCombo.setSelectedItem(workspace));
-            }
+            log("Getting workspaces");
+//            List<Workspace> workspaceList = faradayConnector.getWorkspaces();
+            WorkspaceWrapper workspaceList = faradayConnector.getWorkspaces();
+            workspaceList.getRows().stream().filter(ws -> ws.isActive() == true).forEach(workspaceCombo::addItem);
+//
+//            if (!currentWorkspaceName.isEmpty()) {
+//                workspaceList.stream()
+//                        .filter(workspace -> workspace.getName().equals(currentWorkspaceName))
+//                        .findFirst()
+//                        .ifPresent(workspace -> workspaceCombo.setSelectedItem(workspace));
+//            }
 
 
         } catch (CookieExpiredException | InvalidFaradayServerException e) {
             log("Could not fetch workspaces: " + e);
+        } catch (Exception e){
+            log("Otra exception: " + e);
         }
+
     }
 
     /**

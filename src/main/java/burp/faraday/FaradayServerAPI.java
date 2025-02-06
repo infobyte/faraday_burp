@@ -10,6 +10,7 @@ import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.exceptions.http.UnauthorizedException;
 import burp.faraday.exceptions.http.BadRequestException;
 import burp.faraday.models.Workspace;
+import burp.faraday.models.WorkspaceWrapper;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
 import burp.faraday.models.responses.CreatedObjectEntity;
@@ -81,7 +82,8 @@ public interface FaradayServerAPI {
      */
     @RequestLine("GET /_api/v3/ws")
     @Headers("Content-Type: application/json")
-    List<Workspace> getWorkspaces() throws UnauthorizedException;
+//    List<Workspace> getWorkspaces() throws UnauthorizedException;
+    WorkspaceWrapper getWorkspaces() throws UnauthorizedException;
 
     /**
      * Create a workspace.

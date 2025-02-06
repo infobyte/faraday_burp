@@ -6,6 +6,8 @@
 
 package burp.faraday.models;
 
+import java.util.List;
+
 public class Workspace {
     private int id;
     private String name;
