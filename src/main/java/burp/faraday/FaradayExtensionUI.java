@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 
+import static burp.faraday.FaradayConnector.getMinimumVersion;
+
 /**
  * This class will be responsible of drawing the UI of the extension inside Burp
  */
@@ -496,7 +498,7 @@ public class FaradayExtensionUI implements ITab {
                     "correct and the Faraday service is running.");
             return;
         } catch (ServerTooOldException e) {
-            showErrorAlert("The extension won't work properly due to you server version. Please upgrade to the latest.");
+            showErrorAlert("The extension won't work properly due to your faraday server version. Minimum required version is " + getMinimumVersion());
             return;
         }
         notifyLoggedIn(true);
@@ -675,7 +677,6 @@ public class FaradayExtensionUI implements ITab {
 
     /**
      * Create a new workspace
-     @param workspace The name of the new workspace.
      */
     private void createWorkspace() {
         String workspaceName = newWorkspaceText.getText().trim();

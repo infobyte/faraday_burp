@@ -56,7 +56,7 @@ public class FaradayConnector {
     /**
      * Minimum version required to use the extension.
      */
-    private static final Version MINIMUM_VERSION = Version.valueOf("3.4.0");
+    private static final Version MINIMUM_VERSION = Version.valueOf("5.1.0");
 
     private final PrintWriter stdout;
     private FaradayServerAPI faradayServerAPI;
@@ -70,6 +70,10 @@ public class FaradayConnector {
 
     public FaradayConnector(PrintWriter stdout) {
         this.stdout = stdout;
+    }
+
+    public static Version getMinimumVersion() {
+        return MINIMUM_VERSION;
     }
 
     /**
@@ -192,40 +196,18 @@ public class FaradayConnector {
      *
      */
     public void validateFaradayURL() throws InvalidFaradayServerException {
-
-//        ServerInfo serverInfo;
-//        try {
-//            serverInfo = faradayServerAPI.getInfo();
-//        } catch (FeignException e) {
-//            throw new InvalidFaradayServerException();
-//        }
-//
-//        final Version serverVersion;
-//
-//        if (serverInfo.getVersion().contains("-")) {
-//            // The version has the license type, we should strip it.
-//            final String[] versionParts = serverInfo.getVersion().split("-");
-//
-//            serverVersion = parseVersion(versionParts[1]);
-//        } else {
-//            // The server is the White edition, no license type in the version.
-//            serverVersion = parseVersion(serverInfo.getVersion());
-//        }
-//
-//        log("Faraday Server version: " + serverVersion.toString());
-//
-//        if (serverVersion.lessThan(MINIMUM_VERSION)) {
-//            log("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
-//            throw new ServerTooOldException();
-//        }
         log("Validating Faraday URL");
         ServerConfig serverconfig;
         try {
             serverconfig = faradayServerAPI.getConfig();
-            if (serverconfig.getSSO() != null){
-                log("Faraday server running");
-                this.urlIsValid = true;
+            if (serverconfig == null) {
+                throw new InvalidFaradayServerException();
             }
+            this.urlIsValid = true;
+//            if (serverconfig.getSSO() != null){
+//                log("Faraday server running");
+//                this.urlIsValid = true;
+//            }
         } catch (FeignException e) {
             log("Connection with Faraday server could not be established");
             throw new InvalidFaradayServerException();
