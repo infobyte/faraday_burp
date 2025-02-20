@@ -486,6 +486,19 @@ public class FaradayExtensionUI implements ITab {
         }
 
         extensionSettings.setUsername(username);
+
+        log("Verifying Faraday's version");
+        try {
+            faradayConnector.validateFaradayMinimumVersion();
+        }
+        catch (InvalidFaradayServerException e) {
+            showErrorAlert("Could not connect to Faraday at " + faradayUrlText.getText().trim() + ". Please ensure the provided URL is " +
+                    "correct and the Faraday service is running.");
+            return;
+        } catch (ServerTooOldException e) {
+            showErrorAlert("The extension won't work properly due to you server version. Please upgrade to the latest.");
+            return;
+        }
         notifyLoggedIn(true);
 
     }
@@ -527,14 +540,12 @@ public class FaradayExtensionUI implements ITab {
         }
 
         faradayConnector.setBaseUrl(faradayUrl, ignoreSSLErrorsCheckbox.isSelected());
-
+        log("Connecting to Faraday.");
         try {
             faradayConnector.validateFaradayURL();
         } catch (InvalidFaradayServerException e) {
-            showErrorAlert("Faraday Server URL is not a valid Faraday server.");
-            return;
-        } catch (ServerTooOldException e) {
-            showErrorAlert("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
+            showErrorAlert("Could not connect to Faraday at " + faradayUrl + ". Please ensure the provided URL is " +
+                    "correct and the Faraday service is running.");
             return;
         }
 
@@ -543,8 +554,10 @@ public class FaradayExtensionUI implements ITab {
         statusButton.setText("Login");
 
         faradayUrlText.setEditable(false);
+
         setLoginStatus("Connected");
         log("Connected");
+
         this.status = FaradayConnectorStatus.CONNECTED;
     }
 

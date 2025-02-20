@@ -15,10 +15,7 @@ import burp.faraday.models.Workspace;
 import burp.faraday.models.WorkspaceWrapper;
 import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
-import burp.faraday.models.responses.CreatedObjectEntity;
-import burp.faraday.models.responses.ExistingObjectEntity;
-import burp.faraday.models.responses.LoginStatus;
-import burp.faraday.models.responses.ServerInfo;
+import burp.faraday.models.responses.*;
 import burp.faraday.models.vulnerability.Service;
 import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Vulnerability;
@@ -192,9 +189,59 @@ public class FaradayConnector {
      * Validates that the current baseUrl points to a valid Faraday Server.
      *
      * @throws InvalidFaradayServerException When the URL does not point to a valid Faraday Server.
+     *
+     */
+    public void validateFaradayURL() throws InvalidFaradayServerException {
+
+//        ServerInfo serverInfo;
+//        try {
+//            serverInfo = faradayServerAPI.getInfo();
+//        } catch (FeignException e) {
+//            throw new InvalidFaradayServerException();
+//        }
+//
+//        final Version serverVersion;
+//
+//        if (serverInfo.getVersion().contains("-")) {
+//            // The version has the license type, we should strip it.
+//            final String[] versionParts = serverInfo.getVersion().split("-");
+//
+//            serverVersion = parseVersion(versionParts[1]);
+//        } else {
+//            // The server is the White edition, no license type in the version.
+//            serverVersion = parseVersion(serverInfo.getVersion());
+//        }
+//
+//        log("Faraday Server version: " + serverVersion.toString());
+//
+//        if (serverVersion.lessThan(MINIMUM_VERSION)) {
+//            log("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
+//            throw new ServerTooOldException();
+//        }
+        log("Validating Faraday URL");
+        ServerConfig serverconfig;
+        try {
+            serverconfig = faradayServerAPI.getConfig();
+            if (serverconfig.getSSO() != null){
+                log("Faraday server running");
+                this.urlIsValid = true;
+            }
+        } catch (FeignException e) {
+            log("Connection with Faraday server could not be established");
+            throw new InvalidFaradayServerException();
+        } catch (Exception e) {
+            log("An exception occurred while trying to connect with Faraday server: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Validates that the current baseUrl points to a valid Faraday Server.
+     *
+     * @throws InvalidFaradayServerException When the URL does not point to a valid Faraday Server.
      * @throws ServerTooOldException         When the server is running a version lower than 3.4.0
      */
-    public void validateFaradayURL() throws ServerTooOldException, InvalidFaradayServerException {
+    public void validateFaradayMinimumVersion() throws ServerTooOldException, InvalidFaradayServerException {
+
         ServerInfo serverInfo;
         try {
             serverInfo = faradayServerAPI.getInfo();
@@ -220,9 +267,20 @@ public class FaradayConnector {
             log("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
             throw new ServerTooOldException();
         }
-
-        this.urlIsValid = true;
-        log("Faraday server found!");
+//        log("Validating Faraday URL");
+//        ServerConfig serverconfig;
+//        try {
+//            serverconfig = faradayServerAPI.getConfig();
+//            if (serverconfig.getSSO() != null){
+//                log("Faraday server running");
+//                this.urlIsValid = true;
+//            }
+//        } catch (FeignException e) {
+//            log("Connection with Faraday server could not be established");
+//            throw new InvalidFaradayServerException();
+//        } catch (Exception e) {
+//            log("An exception occurred while trying to connect with Faraday server: " + e.getMessage());
+//        }
     }
 
     /**
