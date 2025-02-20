@@ -1,7 +1,6 @@
 # v2.9.1 - 2025/02/20
 
-* Update Faraday's minimum version to 5.1.0
-* Fix workspace listing
+* [Fix] Workspace listing. Also update Faraday's minimum version to 5.1.0. #25
 
 
 # v2.9 - 2022/12/15
