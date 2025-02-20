@@ -1,6 +1,6 @@
 # v2.9.1 - 2025/02/20
 
-* [Fix] Workspace listing. Also update Faraday's minimum version to 5.1.0. #25
+* [FIX] Workspace Listing Updated for Faraday API Compatibility.Now the minimum required Faraday version is 5.1.0. #25
 
 
 # v2.9 - 2022/12/15
