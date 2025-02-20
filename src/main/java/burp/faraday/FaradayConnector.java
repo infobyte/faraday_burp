@@ -245,20 +245,6 @@ public class FaradayConnector {
             log("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
             throw new ServerTooOldException();
         }
-//        log("Validating Faraday URL");
-//        ServerConfig serverconfig;
-//        try {
-//            serverconfig = faradayServerAPI.getConfig();
-//            if (serverconfig.getSSO() != null){
-//                log("Faraday server running");
-//                this.urlIsValid = true;
-//            }
-//        } catch (FeignException e) {
-//            log("Connection with Faraday server could not be established");
-//            throw new InvalidFaradayServerException();
-//        } catch (Exception e) {
-//            log("An exception occurred while trying to connect with Faraday server: " + e.getMessage());
-//        }
     }
 
     /**
