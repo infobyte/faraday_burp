@@ -1,3 +1,9 @@
+# v2.9.1 - 2025/02/20
+
+* Update Faraday's minimum version to 5.1.0
+* Fix workspace listing
+
+
 # v2.9 - 2022/12/15
 
 * Add create workspace button

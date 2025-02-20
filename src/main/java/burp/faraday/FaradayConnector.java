@@ -204,10 +204,6 @@ public class FaradayConnector {
                 throw new InvalidFaradayServerException();
             }
             this.urlIsValid = true;
-//            if (serverconfig.getSSO() != null){
-//                log("Faraday server running");
-//                this.urlIsValid = true;
-//            }
         } catch (FeignException e) {
             log("Connection with Faraday server could not be established");
             throw new InvalidFaradayServerException();
