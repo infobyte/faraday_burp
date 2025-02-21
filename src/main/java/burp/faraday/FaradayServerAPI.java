@@ -15,6 +15,7 @@ import burp.faraday.models.requests.SecondFactor;
 import burp.faraday.models.requests.User;
 import burp.faraday.models.responses.CreatedObjectEntity;
 import burp.faraday.models.responses.LoginStatus;
+import burp.faraday.models.responses.ServerConfig;
 import burp.faraday.models.responses.ServerInfo;
 import burp.faraday.models.vulnerability.Host;
 import burp.faraday.models.vulnerability.Service;
@@ -37,6 +38,15 @@ public interface FaradayServerAPI {
     @RequestLine("GET /_api/v3/info")
     @Headers("Content-Type: application/json")
     ServerInfo getInfo();
+
+    /**
+     * Fetches the config of the current Faraday Server
+     *
+     * @return An instance of {@link ServerConfig} describing the Faraday Server
+     */
+    @RequestLine("GET /_api/config")
+    @Headers("Content-Type: application/json")
+    ServerConfig getConfig();
 
     /**
      * Attempts to login using the provided {@link User} credentials.

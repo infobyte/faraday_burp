@@ -80,8 +80,6 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
                 faradayConnector.validateFaradayURL();
             } catch (InvalidFaradayServerException e) {
                 faradayExtensionUI.showErrorAlert("Faraday Server is down.");
-            } catch (ServerTooOldException e) {
-                faradayExtensionUI.showErrorAlert("Faraday server is too old to be used with this extension. Please upgrade to the latest version.");
             }
 
             try {
