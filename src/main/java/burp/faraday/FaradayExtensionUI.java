@@ -10,6 +10,7 @@ import burp.IBurpExtenderCallbacks;
 import burp.IScanIssue;
 import burp.ITab;
 import burp.faraday.exceptions.*;
+import burp.faraday.exceptions.http.ConflictException;
 import burp.faraday.models.ExtensionSettings;
 import burp.faraday.models.FaradayConnectorStatus;
 import burp.faraday.models.Workspace;
@@ -748,10 +749,10 @@ public class FaradayExtensionUI implements ITab {
                     commandId = commandsMap.get(workspace.getId());
                 }
                 if (issues.size() > 0){
-
                     for (Vulnerability vulnerability : vulnerabilities) {
                         vulnerability.setCommandId(commandId);
-                        if (addVulnerability(vulnerability, workspace)) {
+                        int created = addVulnerability(vulnerability, workspace);
+                        if (created == 1) {
                             log("Created Vulnerability");
                             created_vulns ++;
                         }
@@ -861,22 +862,24 @@ public class FaradayExtensionUI implements ITab {
         return commandId;
     }
 
-    public boolean addVulnerability(final Vulnerability vulnerability, final Workspace workspace) {
+    public int addVulnerability(final Vulnerability vulnerability, final Workspace workspace) {
 
         try {
             faradayConnector.addVulnerabilityToWorkspace(vulnerability, workspace);
         } catch (ObjectNotCreatedException e) {
             log("Unable to create object tree: " + e);
-            return false;
+            return -1;
+        } catch (AlreadyCreatedFaradayServerException e){
+            log("Vulnerability already created ...");
+            return -2;
         } catch (InvalidFaradayServerException e) {
             showErrorAlert("Could not connect to Faraday Server. Please check that it is running and that you are authenticated.");
-            return false;
+            return -3;
         } catch (Exception e) {
             log("Add Vuln Error: " + e);
-            return false;
+            return -4;
         }
-
-        return true;
+        return 1;
     }
 
     /**

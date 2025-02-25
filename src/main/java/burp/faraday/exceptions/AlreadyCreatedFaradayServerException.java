@@ -6,6 +6,5 @@
 
 package burp.faraday.exceptions;
 
-public class InvalidFaradayServerException extends Exception {
+public class AlreadyCreatedFaradayServerException extends Exception {
 }
-
