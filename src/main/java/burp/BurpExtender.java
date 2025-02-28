@@ -186,7 +186,8 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             this.faradayExtensionUI.addMessage("Sending " + vuln_count + " vulnerabilities...");
             for (Vulnerability vulnerability : vulnerabilities) {
                 vulnerability.setCommandId(commandId);
-                if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
+                int created = faradayExtensionUI.addVulnerability(vulnerability, workspace);
+                if (created == 1) {
                     this.faradayExtensionUI.addMessage("Created Vulnerability");
                     created_vulns ++;
                 }
@@ -234,7 +235,8 @@ public class BurpExtender implements IBurpExtender, IExtensionStateListener, ISc
             this.faradayExtensionUI.addMessage("Sending " + vuln_count + " requests...");
             for (Vulnerability vulnerability : vulnerabilities) {
                 vulnerability.setCommandId(commandId);
-                if (faradayExtensionUI.addVulnerability(vulnerability, workspace)) {
+                int created = faradayExtensionUI.addVulnerability(vulnerability, workspace);
+                if (created == 1) {
                     this.faradayExtensionUI.addMessage("Created Request");
                     created_vulns ++;
                 }

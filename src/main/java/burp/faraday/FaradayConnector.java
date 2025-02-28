@@ -424,7 +424,6 @@ public class FaradayConnector {
     /**
      * Adds a vulnerability to the current workspace.
      *
-     * @param vulnerability The vulnerability to create.
      */
     public int addCommandToWorkspace(final Command command, final Workspace workspace)
             throws InvalidFaradayServerException,
@@ -455,7 +454,10 @@ public class FaradayConnector {
      */
     void addVulnerabilityToWorkspace(final Vulnerability vulnerability, final Workspace workspace)
             throws InvalidFaradayServerException,
-            ObjectNotCreatedException {
+            ObjectNotCreatedException,
+            BadRequestFaradayServerException,
+            AlreadyCreatedFaradayServerException
+            {
 
         if (!this.urlIsValid) {
             throw new InvalidFaradayServerException();
@@ -478,22 +480,44 @@ public class FaradayConnector {
             service.setParent(hostEntity.getId());
             service.setCommandId(vulnerability.getCommandId());
             CreatedObjectEntity serviceEntity;
+
             try {
+                if (service.getPorts()[0] < 0){
+                    log(service.getName());
+                    if (service.getName() == "http"){
+                        service.setPorts(new int[]{80});
+                    }
+                    else{
+                        service.setPorts(new int[]{443});
+                    }
+                }
                 serviceEntity = faradayServerAPI.createService(workspace.getName(), service);
             } catch (ConflictException e) {
                 serviceEntity = e.getExistingObject().getObject();
+            } catch (BadRequestException e) {
+                // TODO: handle of bad request responses
+                log(workspace.getName());
+                log(service.toString());
+                throw new BadRequestFaradayServerException();
             }
 
             // Set the parent ID of the vulnerability, and issue the creation request.
             vulnerability.setParent(serviceEntity.getId());
+            log("Service " + serviceEntity.getId());
+
             try {
                 final CreatedObjectEntity vulnerabilityEntity = faradayServerAPI.createVulnerability(workspace.getName(), vulnerability);
+            } catch (ConflictException e) {
+                log("Vulnerability already exists.");
+                throw new AlreadyCreatedFaradayServerException();
             } catch (Exception e) {
                 throw new ObjectNotCreatedException();
             }
-            //log("Created vulnerability " + vulnerabilityEntity.getId());
-
-        } catch (UnauthorizedException e) {
+        } catch (AlreadyCreatedFaradayServerException e) {
+            log("Vulnerability already exists.");
+            throw new AlreadyCreatedFaradayServerException();
+        }
+        catch (UnauthorizedException e) {
             throw new ObjectNotCreatedException();
         }
     }

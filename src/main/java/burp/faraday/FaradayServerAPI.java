@@ -149,7 +149,7 @@ public interface FaradayServerAPI {
      */
     @RequestLine("POST /_api/v3/ws/{workspace}/services")
     @Headers("Content-Type: application/json")
-    CreatedObjectEntity createService(@Param("workspace") String workspace, Service service) throws UnauthorizedException, ConflictException;
+    CreatedObjectEntity createService(@Param("workspace") String workspace, Service service) throws BadRequestException, UnauthorizedException, ConflictException;
 
     /**
      * Creates a vulnerability in the specified workspace.
@@ -163,5 +163,5 @@ public interface FaradayServerAPI {
      */
     @RequestLine("POST /_api/v3/ws/{workspace}/vulns")
     @Headers("Content-Type: application/json")
-    CreatedObjectEntity createVulnerability(@Param("workspace") String workspace, Vulnerability vulnerability) throws UnauthorizedException;
+    CreatedObjectEntity createVulnerability(@Param("workspace") String workspace, Vulnerability vulnerability) throws UnauthorizedException, ConflictException;
 }
