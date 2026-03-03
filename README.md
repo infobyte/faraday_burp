@@ -16,7 +16,7 @@ The Faraday Burp extension bridges Burp Suite and Faraday Server, allowing you t
 ## Requirements
 
 | Component | Minimum Version |
-|-----------|----------------|
+|-----------|-----------------|
 | Faraday Server | **5.1.0** |
 | Burp Suite | Community or Professional edition |
 | Java | 8+ (JRE already bundled with Burp) |
